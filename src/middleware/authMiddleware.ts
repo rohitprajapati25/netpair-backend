@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 export const protect = (
@@ -13,10 +13,7 @@ export const protect = (
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    );
+    const decoded = jwt.verify(token,process.env.JWT_SECRET as string);
 
     req.user = decoded;
     next();

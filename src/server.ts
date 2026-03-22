@@ -1,16 +1,23 @@
-import dotenv from 'dotenv'
-dotenv.config();
-import app from '../src/app'
-import conectedDb from '../src/db/db'
-import { superAdmin } from "../src/utils/superAdmin";
-import authRoutes from "./routes/auth.routes";
+// import dotenv from 'dotenv'
+// dotenv.config();
+// import app from './app.js'
+// import connectDb from './db/db.js'
+// import { superAdmin } from "./utils/superAdmin.js";
+// import authRoutes from "./routes/auth.routes.js";
+// import adminRoutes from "./routes/adminRoutes.js";
 
+// connectDb()
+//   .then(() => {
+//     superAdmin();
 
+//     app.use("/api/auth", authRoutes);
+//     app.use("/api/admin", adminRoutes);
 
-conectedDb();
-superAdmin();
-app.use("/api/auth", authRoutes);
-
-app.listen(5000,()=>{
-    console.log("http://localhost:5000")
-})
+//     app.listen(5000, () => {
+//       console.log("http://localhost:5000");
+//     });
+//   })
+//   .catch((err) => {
+//     console.error("Failed to start server due to DB error", err);
+//     process.exit(1);
+//   });

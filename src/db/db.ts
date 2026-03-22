@@ -1,9 +1,23 @@
 import mongoose from 'mongoose'
 
-const connectDb = async ()=>{
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDb Connected...");
-    
-}
+const connectDb = async () => {
+    const uri = process.env.MONGO_URI;
+    if (!uri) {
+        console.error("MONGO_URI not set in environment");
+        throw new Error("Missing MONGO_URI");
+    }
 
-module.exports = connectDb;
+    try {
+        await mongoose.connect(uri);
+        console.log("MongoDb Connected...");
+    } catch (err) {
+        console.error("MongoDB connection error:", err);
+        // rethrow so caller knows connection failed
+        throw err;
+    }
+};
+
+export default connectDb;
+
+
+//use rolewise login using context api and 

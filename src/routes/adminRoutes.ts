@@ -1,15 +1,27 @@
+
+
+
+
+
 import express from "express";
-import { createUser } from "../controllers/adminController";
-import { protect } from "../middleware/authMiddleware";
-import { authorizeRoles } from "../middleware/roleMiddleware";
+import { createEmployee, getEmployees, updateEmployee, deleteEmployee } from "../controllers/employeeController.js";
+import { getAttendanceRecords, markAttendance, updateAttendance, deleteAttendance } from "../controllers/attendanceController.js";
+import { protect } from "../middleware/authMiddleware.js";
+import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { ROLES } from "../../constants/roles.js";
 
 const router = express.Router();
 
-router.post(
-  "/create-user",
-  protect,
-  authorizeRoles("superadmin", "admin", "hr"), 
-  createUser
-);
+// Employee Routes
+router.post("/employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), createEmployee);
+router.get("/employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getEmployees);
+router.put("/employees/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), updateEmployee);
+router.delete("/employees/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteEmployee);
+
+// Attendance Routes
+router.get("/attendance", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getAttendanceRecords);
+router.post("/attendance/mark", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), markAttendance);
+router.put("/attendance/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateAttendance);
+router.delete("/attendance/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteAttendance);
 
 export default router;
