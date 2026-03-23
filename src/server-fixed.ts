@@ -15,7 +15,6 @@ const startServer = async () => {
     await superAdmin();
     console.log("✅ SuperAdmin Ready!");
 
-    // Mount routes AFTER DB connection
     app.use("/api/auth", authRoutes);
     app.use("/api/admin", adminRoutes);
 

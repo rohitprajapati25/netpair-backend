@@ -18,14 +18,12 @@ export const getAttendanceRecords = async (req: Request, res: Response) => {
 
     const query: any = {};
 
-    // Filter by date range
     if (dateFrom || dateTo) {
       query.date = {};
       if (dateFrom) query.date.$gte = new Date(dateFrom as string);
       if (dateTo) query.date.$lte = new Date(dateTo as string + 'T23:59:59.999Z');
     }
 
-    // Employee lookup with search
     if (search) {
       const users = await User.find({
         $or: [
@@ -37,10 +35,8 @@ export const getAttendanceRecords = async (req: Request, res: Response) => {
       query.employee = { $in: users.map((u: any) => u._id) };
     }
 
-    // Status filter
     if (status && status !== 'All') query.status = status;
     
-    // Department filter (via user lookup)
     if (department && department !== 'All') {
       const users = await User.find({ department, role: { $in: [ROLES.EMPLOYEE, ROLES.HR] } } as any);
       query.employee = { $in: users.map((u: any) => u._id) };
@@ -77,7 +73,6 @@ export const markAttendance = async (req: Request, res: Response) => {
   try {
     const { employeeId, status, workMode, checkIn, checkOut, notes } = req.body;
     
-    // Calculate working hours
     let workingHours = 0;
     if (checkIn && checkOut) {
       const [h1, m1] = checkIn.split(':').map(Number);

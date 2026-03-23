@@ -10,7 +10,7 @@ export const loginUser = async (req: Request, res: Response) => {
     // 1️⃣ Check email
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid Email" });
+return res.status(404).json({ success: false, message: "User not found" });
     }
 
     // 2️⃣ Compare password
@@ -19,6 +19,13 @@ export const loginUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid Password" });
     }
 
+    // Security Check: Status active hai ya nahi?
+    if (user.status.toString() === "inactive") {
+    return res.status(403).json({ 
+        success: false, 
+        message: "Aapka account abhi active nahi hai. Kripya Admin se sampark karein." 
+    });
+}
     // 3️⃣ Generate Token
     const token = jwt.sign(
       {

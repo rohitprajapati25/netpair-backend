@@ -1,8 +1,3 @@
-
-
-
-
-
 import express from "express";
 import { createEmployee, getEmployees, updateEmployee, deleteEmployee } from "../controllers/employeeController.js";
 import { getAttendanceRecords, markAttendance, updateAttendance, deleteAttendance } from "../controllers/attendanceController.js";
@@ -12,13 +7,11 @@ import { ROLES } from "../../constants/roles.js";
 
 const router = express.Router();
 
-// Employee Routes
 router.post("/employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), createEmployee);
 router.get("/employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getEmployees);
 router.put("/employees/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), updateEmployee);
 router.delete("/employees/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteEmployee);
 
-// Attendance Routes
 router.get("/attendance", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getAttendanceRecords);
 router.post("/attendance/mark", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), markAttendance);
 router.put("/attendance/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateAttendance);
