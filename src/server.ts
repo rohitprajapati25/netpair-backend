@@ -1,23 +1,21 @@
-// import dotenv from 'dotenv'
-// dotenv.config();
-// import app from './app.js'
-// import connectDb from './db/db.js'
-// import { superAdmin } from "./utils/superAdmin.js";
-// import authRoutes from "./routes/auth.routes.js";
-// import adminRoutes from "./routes/adminRoutes.js";
+import dotenv from 'dotenv';
+dotenv.config();
 
-// connectDb()
-//   .then(() => {
-//     superAdmin();
+import { app, server } from './app.js';
+import connectDb from './db/db.js';
+import { superAdmin } from "./utils/superAdmin.js";
 
-//     app.use("/api/auth", authRoutes);
-//     app.use("/api/admin", adminRoutes);
+connectDb()
+  .then(() => {
+    superAdmin();
 
-//     app.listen(5000, () => {
-//       console.log("http://localhost:5000");
-//     });
-//   })
-//   .catch((err) => {
-//     console.error("Failed to start server due to DB error", err);
-//     process.exit(1);
-//   });
+    server.listen(5000, () => {
+      console.log("🚀 Server + WebSocket running on http://localhost:5000");
+      console.log("⚡ Real-time employee updates enabled!");
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to start server due to DB error", err);
+    process.exit(1);
+  });
+

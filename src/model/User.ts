@@ -13,7 +13,7 @@ export interface IUser extends Document {
   joiningDate?: Date;
   employmentType?: string;
   password: string;
-  status: "Active" | "Inactive";
+  status: ROLES.ACTIVE | ROLES.INACTIVE;
   isFirstLogin: boolean;
   createdBy?: mongoose.Types.ObjectId;
   deletedAt?: Date; // ✅ Soft delete
@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema<IUser>(
     gender: String,
     dob: Date,
     department: { type: String, required: true },
-    designation: { type: String, required: true },
+  designation: { type: String, required: true },  // ✅ Matches form
     role: {
       type: String,
       required: true,
@@ -39,8 +39,8 @@ const userSchema = new mongoose.Schema<IUser>(
     password: { type: String, required: true },
     status: {
       type: String,
-      enum: ["Active", "Inactive"],
-      default: "Active",
+      enum: [ROLES.ACTIVE,ROLES.INACTIVE ],
+      default: ROLES.INACTIVE,
     },
     isFirstLogin: { type: Boolean, default: true },
     createdBy: {
