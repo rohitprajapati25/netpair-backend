@@ -1,16 +1,16 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import Admin from "../model/Admin.js";
 import HR from "../model/HR.js";
+import Admin from "../model/Admin.js";
 import User from "../model/User.js";
 import Employee from "../model/Employee.js";
 import { ROLES } from "../../constants/roles.js";
 
 // ================================
-// ADMIN + USER DUAL CREATE (Copy Pattern)
+// HR + USER DUAL CREATE (Copy Employee Pattern)
 // ================================
-export const createAdmin = async (req: Request, res: Response) => {
+export const createHR = async (req: Request, res: Response) => {
   try {
     const {
       name, email, phone, gender, dob, department, designation,
@@ -21,20 +21,20 @@ export const createAdmin = async (req: Request, res: Response) => {
     if (!name?.trim() || !email?.trim() || !phone?.trim() || !designation?.trim() || !password?.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields",
+        message: "Missing required fields: name, email, phone, designation, password",
       });
     }
 
-    // Email unique check
+    // Email unique check (all collections)
     const existingChecks = [
-      Admin.findOne({ email: email.toLowerCase() }),
       HR.findOne({ email: email.toLowerCase() }),
       Employee.findOne({ email: email.toLowerCase() }),
+      Admin.findOne({ email: email.toLowerCase() }),
       User.findOne({ email: email.toLowerCase() })
     ];
-    const [existingAdmin, existingHR, existingEmp, existingUser] = await Promise.all(existingChecks);
+    const [existingHR, existingEmp, existingAdmin, existingUser] = await Promise.all(existingChecks);
     
-    if (existingAdmin || existingHR || existingEmp || existingUser) {
+    if (existingHR || existingEmp || existingAdmin || existingUser) {
       return res.status(400).json({
         success: false,
         message: "Email already registered",
@@ -60,36 +60,36 @@ export const createAdmin = async (req: Request, res: Response) => {
       createdBy: (req as any).user.id,
     };
 
-    // Admin Collection
-    const adminDoc = new Admin({ ...commonData, role: ROLES.ADMIN });
-    await adminDoc.save();
+    // HR Collection
+    const hrDoc = new HR({ ...commonData, role: ROLES.HR });
+    await hrDoc.save();
 
     // User Collection (Auth)
-    const userDoc = new User({ ...commonData, role: ROLES.ADMIN });
+    const userDoc = new User({ ...commonData, role: ROLES.HR });
     await userDoc.save();
 
     // Response
-    const populatedAdmin = await Admin.findById(adminDoc._id)
+    const populatedHR = await HR.findById(hrDoc._id)
       .populate('createdBy', 'name email')
       .select('-password');
 
     res.status(201).json({
       success: true,
-      message: "Admin created + User synced",
-      admin: populatedAdmin,
+      message: "HR created + User synced",
+      hr: populatedHR,
       userId: userDoc._id
     });
 
   } catch (error: any) {
-    console.error('CREATE_ADMIN_ERROR:', error);
+    console.error('CREATE_HR_ERROR:', error);
     if (error.code === 11000) return res.status(400).json({ success: false, message: 'Email exists' });
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ================================
-// ADMIN CRUD Operations
-export const getAdmins = async (req: Request, res: Response) => {
+// HR CRUD (get, update, delete)
+export const getHRs = async (req: Request, res: Response) => {
   try {
     const { search, page = 1, limit = 10 } = req.query;
     const query: any = { createdBy: (req as any).user.id };
@@ -98,59 +98,59 @@ export const getAdmins = async (req: Request, res: Response) => {
       query.$or = [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }];
     }
 
-    const admins = await Admin.find(query)
+    const hrs = await HR.find(query)
       .populate('createdBy', 'name')
       .select('-password')
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
 
-    const total = await Admin.countDocuments(query);
+    const total = await HR.countDocuments(query);
 
-    res.json({ success: true, admins, total, page: Number(page), limit: Number(limit) });
+    res.json({ success: true, hrs, total, page: Number(page), limit: Number(limit) });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const updateAdmin = async (req: Request, res: Response) => {
+export const updateHR = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    const admin = await Admin.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
-    if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
+    const hr = await HR.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    if (!hr) return res.status(404).json({ success: false, message: "HR not found" });
 
-    // Update Admin
-    await Admin.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
+    // Update HR
+    await HR.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
 
     // Sync User
-    await User.findOneAndUpdate({ email: admin.email }, { 
+    await User.findOneAndUpdate({ email: hr.email }, { 
       $set: { 
         ...('designation' in updateData && { designation: updateData.designation }),
         ...('department' in updateData && { department: updateData.department }),
-        status: updateData.status || admin.status 
+        status: updateData.status || hr.status 
       }
     });
 
-    const updatedAdmin = await Admin.findById(id).populate('createdBy', 'name').select('-password');
-    res.json({ success: true, admin: updatedAdmin });
+    const updatedHR = await HR.findById(id).populate('createdBy', 'name').select('-password');
+    res.json({ success: true, hr: updatedHR });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const deleteAdmin = async (req: Request, res: Response) => {
+export const deleteHR = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const admin = await Admin.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
-    if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
+    const hr = await HR.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    if (!hr) return res.status(404).json({ success: false, message: "HR not found" });
 
     // Hard delete both
-    await Admin.findByIdAndDelete(id);
-    await User.findOneAndDelete({ email: admin.email });
+    await HR.findByIdAndDelete(id);
+    await User.findOneAndDelete({ email: hr.email });
 
-    res.json({ success: true, message: "Admin + User deleted" });
+    res.json({ success: true, message: "HR + User deleted" });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

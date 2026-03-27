@@ -5,6 +5,8 @@ import { initSocket } from './socket.js';
 import adminRoutes from './routes/adminRoutes.js';
 import authRoutes from './routes/auth.routes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import hrRoutes from './routes/hrRoutes.js';
+import adminRoleRoutes from './routes/adminRoleRoutes.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -30,6 +32,10 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/hr', hrRoutes);
+app.use('/api/admins', adminRoleRoutes);
+app.use('/api/hr', hrRoutes);
+app.use('/api/admins', adminRoleRoutes);
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.status(404).json({ success: false, message: 'Route not found' });

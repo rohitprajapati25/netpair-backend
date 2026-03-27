@@ -35,7 +35,11 @@ export const getAttendanceRecords = async (req: Request, res: Response) => {
       query.employee = { $in: users.map((u: any) => u._id) };
     }
 
+
     if (status && status !== 'All') query.status = status;
+    // Removed default 'Present' filter - show all records first for debugging
+    console.log('🔍 Attendance query:', JSON.stringify(query));
+
     
     if (department && department !== 'All') {
       const users = await User.find({ department, role: { $in: [ROLES.EMPLOYEE, ROLES.HR] } } as any);
@@ -53,7 +57,7 @@ export const getAttendanceRecords = async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      employees: records,
+      records: records,  // ✅ Frontend expects 'records'
       pagination: {
         current: Number(page),
         pages: Math.ceil(total / Number(limit)),

@@ -488,8 +488,10 @@ export const deleteEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // 1. Get employee email for User sync
-    const employee = await Employee.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    console.log('Delete request for ID:', id, 'User:', req.user?.id);
+
+    // 1. Get employee for sync
+    const employee = await Employee.findOne({ _id: id, createdBy: req.user.id }).select('email');
     if (!employee) {
       return res.status(404).json({
         success: false,
@@ -497,26 +499,32 @@ export const deleteEmployee = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Soft-delete Employee
-    await Employee.findByIdAndUpdate(id, { deletedAt: new Date() });
+    console.log('Found employee:', employee.email);
 
-    // 3. Soft-delete User by email
-    await User.findOneAndUpdate(
-      { email: employee.email },
-      { deletedAt: new Date() }
-    );
+    // 2. HARD DELETE Employee
+    const deletedEmp = await Employee.findByIdAndDelete(id);
+    console.log('Employee deleted:', !!deletedEmp);
+
+    // 3. HARD DELETE User by email
+    const deletedUser = await User.findOneAndDelete({ email: employee.email });
+    console.log('User deleted:', !!deletedUser);
 
     res.json({
       success: true,
-      message: "Employee & User deleted successfully (soft-delete)",
+      message: "Employee & User PERMANENTLY deleted",
+      deletedEmployee: !!deletedEmp,
+      deletedUser: !!deletedUser
     });
   } catch (error: any) {
+    console.error('DELETE_ERROR:', error);
     res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
+
+
 
 
 // ✅ NEW: Login endpoint - validate password
