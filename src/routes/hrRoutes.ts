@@ -13,5 +13,11 @@ router.get("/", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getHRs)
 router.put("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateHR);
 router.delete("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN), deleteHR);
 
+// ===== TIMESHEET APPROVAL - HR =====
+import { getTimesheets, approveTimesheet } from "../controllers/timesheetController.js";
+
+router.get("/timesheets", protect, authorizeRoles(ROLES.HR), getTimesheets);
+router.put("/timesheets/:id", protect, authorizeRoles(ROLES.HR), approveTimesheet);
+
 export default router;
 

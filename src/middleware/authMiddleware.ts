@@ -39,10 +39,11 @@ export const protect = async (
 
     req.user = {
       id: user._id,
-      role: user.role || 'employee',
+      role: (user.role || 'employee').toLowerCase().trim(),
       status: normalizedStatus,
       email: user.email
     };
+    console.log('👤 User auth:', { id: req.user.id, role: req.user.role });
 
     next();
   } catch (error) {

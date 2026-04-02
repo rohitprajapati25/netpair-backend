@@ -171,6 +171,7 @@ import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import Employee from "../model/Employee.js";
+import Attendance from "../model/Attendance.js";
 import HR from "../model/HR.js";
 import Admin from "../model/Admin.js";
 import User from "../model/User.js";
@@ -332,15 +333,22 @@ export const createEmployee = async (req: Request, res: Response) => {
 
 export const getEmployees = async (req: Request, res: Response) => {
   try {
-    const { search, department, status, page = 1, limit = 10 } = req.query;
+    const { search, department, status, page = 1, limit = 10, ids } = req.query;
 
-    const query: any = { createdBy: (req as any).user.id };
+    const query: any = {};
+
+    // Handle multi-ID fetch for AddTaskModal
+    if (ids) {
+      const idArray = (ids as string).split(',').map(id => id.trim()).filter(id => mongoose.Types.ObjectId.isValid(id));
+      query._id = { $in: idArray };
+    }
 
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
-{ position: { $regex: search, $options: "i" } },
+        // Schema uses 'designation', so we fix the search field here
+        { designation: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -351,7 +359,28 @@ export const getEmployees = async (req: Request, res: Response) => {
       query.status = status;
     }
 
-const employees = await Employee.find(query)
+    // Aggregate attendance stats per employee
+    const attendanceStats = await Attendance.aggregate([
+      {
+        $match: {
+          status: 'Present',
+          date: { $gte: new Date(new Date().getFullYear(), 0, 1) } // Current year
+        }
+      },
+      {
+        $group: {
+          _id: '$employee',
+          presentCount: { $sum: 1 }
+        }
+      }
+    ]).exec();
+
+    const statsMap = {};
+    attendanceStats.forEach(stat => {
+      statsMap[stat._id.toString()] = stat.presentCount;
+    });
+
+    const employees = await Employee.find(query)
       .populate({
         path: 'createdBy',
         select: 'name'
@@ -360,14 +389,20 @@ const employees = await Employee.find(query)
       .sort({ joiningDate: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
-
+      
+    // Convert to plain objects to allow adding virtual 'presentCount' field
+    const employeesWithStats = employees.map(emp => {
+      const empObj = emp.toObject();
+      empObj.presentCount = statsMap[emp._id.toString()] || 0;
+      return empObj;
+    });
 
     const total = await Employee.countDocuments(query);
 
     res.json({
       success: true,
       count: employees.length,
-      employees,
+      employees: employeesWithStats,
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -530,15 +565,15 @@ export const deleteEmployee = async (req: Request, res: Response) => {
 // ✅ NEW: Login endpoint - validate password
 export const getActiveEmployees = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 10, department, search } = req.query;
+    const { page = 1, limit = 10, department, search, role = 'employee' } = req.query;
 
-    const query: any = { status: ROLES.ACTIVE };
-
+    const query: any = { status: 'active', role: role.toString().toLowerCase() };
 
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
-        { position: { $regex: search, $options: "i" } }
+        { department: { $regex: search, $options: "i" } },
+        { designation: { $regex: search, $options: "i" } }
       ];
     }
 
@@ -547,26 +582,99 @@ export const getActiveEmployees = async (req: Request, res: Response) => {
     }
 
     const employees = await Employee.find(query)
-      .select("name email phone department position role status")
-      .sort({ createdAt: -1 })
+      .select("name _id department designation role")
+      .sort({ name: 1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
-
-    const totalActive = await Employee.countDocuments({ status: ROLES.ACTIVE });
 
     const total = await Employee.countDocuments(query);
 
     res.json({
       success: true,
-      activeCount: totalActive,
-      totalActive,
-      total,
       employees,
       pagination: {
         page: Number(page),
         limit: Number(limit),
         total,
-        totalActive,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// NEW: Get unique companies (departments) for super admin
+export const getCompanies = async (req: Request, res: Response) => {
+  try {
+    const companies = await Employee.aggregate([
+      {
+        $match: { status: 'active' }
+      },
+      {
+        $group: {
+          _id: '$department'
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      },
+      {
+        $project: {
+          name: '$_id',
+          _id: 0
+        }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      companies
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// NEW: Get employees by company for dropdowns
+export const getEmployeesByCompany = async (req: Request, res: Response) => {
+  try {
+    const { company, role, designation, page = 1, limit = 50 } = req.query;
+    const query: any = { status: 'active' };
+
+    if (company) {
+      query.department = company;
+    }
+
+    if (role) {
+      query.role = role;
+    }
+
+    if (designation === 'manager') {
+      query.designation = { $regex: 'manager', $options: 'i' };
+    }
+
+    const employees = await Employee.find(query)
+      .select('name _id department designation role')
+      .sort({ name: 1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+
+    const total = await Employee.countDocuments(query);
+
+    res.json({
+      success: true,
+      employees,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
         pages: Math.ceil(total / Number(limit))
       }
     });

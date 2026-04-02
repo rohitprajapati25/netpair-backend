@@ -108,7 +108,6 @@ const employeeSchema = new Schema<IEmployee>(
     // Employment Details
     department: {
       type: String,
-      required: [true, "Department is required"],
       trim: true,
     },
     designation: {

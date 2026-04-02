@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema<IUser>(
     phone: String,
     gender: String,
     dob: Date,
-    department: { type: String, required: true },
+    department: String,
   designation: { type: String, required: true },  // ✅ Matches form
     role: {
       type: String,

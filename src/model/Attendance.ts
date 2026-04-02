@@ -1,4 +1,4 @@
-import mongoose, { Document } from "mongoose";
+import mongoose, { Document, SchemaOptions } from "mongoose";
 import { IUser } from "../model/User.js";
 
 export enum ATTENDANCE_STATUS {
@@ -26,12 +26,15 @@ export interface IAttendance extends Document {
   workingHours?: number; // In minutes
   notes?: string;
   createdBy?: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId | IUser;
 }
+
+const options: SchemaOptions = { timestamps: true };
 
 const attendanceSchema = new mongoose.Schema<IAttendance>({
   employee: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "User", 
+    ref: "Employee", 
     required: true 
   },
   date: {
@@ -48,15 +51,23 @@ const attendanceSchema = new mongoose.Schema<IAttendance>({
   workMode: {
     type: String,
     enum: Object.values(WORK_MODE),
-    default: WORK_MODE.OFFICE
   },
   workingHours: Number, // minutes
   notes: String,
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
   }
-}, { timestamps: true });
+}, options);
+
+// UNIQUE: 1 employee 1 day - Custom error msg
+attendanceSchema.index({ employee: 1, date: 1 }, { unique: true, sparse: true });
+
+// Duplicate check moved to controller pre-save
+// Index provides DB-level protection
 
 export default mongoose.model<IAttendance>("attendances", attendanceSchema);
-

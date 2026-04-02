@@ -13,5 +13,18 @@ router.put("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES
 router.delete("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteEmployee);
 router.post("/login", loginEmployee);
 
-export default router;
+// ===== EMPLOYEE LEAVE APPLY =====
+import { createLeave } from "../controllers/leaveController.js";
+router.post("/leaves", protect, authorizeRoles(ROLES.EMPLOYEE, ROLES.HR), createLeave);
 
+// ===== TASK & TIMESHEET - Employee =====
+import { getTasks, updateTask, deleteTask } from "../controllers/taskController.js";
+import { submitTimesheet, deleteTimesheet } from "../controllers/timesheetController.js";
+
+router.get("/tasks", protect, authorizeRoles(ROLES.EMPLOYEE), getTasks); // My assigned tasks
+router.put("/tasks/:id", protect, authorizeRoles(ROLES.EMPLOYEE), updateTask);
+router.delete("/tasks/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteTask);
+router.post("/timesheets", protect, authorizeRoles(ROLES.EMPLOYEE), submitTimesheet);
+router.delete("/timesheets/:id", protect, authorizeRoles(ROLES.EMPLOYEE), deleteTimesheet);
+
+export default router;
