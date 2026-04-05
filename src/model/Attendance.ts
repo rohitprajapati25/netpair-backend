@@ -29,7 +29,7 @@ export interface IAttendance extends Document {
   updatedBy?: mongoose.Types.ObjectId | IUser;
 }
 
-const options: SchemaOptions = { timestamps: true };
+const options = { timestamps: true };
 
 const attendanceSchema = new mongoose.Schema<IAttendance>({
   employee: { 

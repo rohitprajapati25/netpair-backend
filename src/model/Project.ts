@@ -27,6 +27,7 @@ export interface IProject extends Document {
   endDate: Date;
   status: PROJECT_STATUS;
   priority: PROJECT_PRIORITY;
+  project_type: string;
   assignedEmployees: mongoose.Types.ObjectId[];
   manager: mongoose.Types.ObjectId;
   budget: number;
@@ -45,6 +46,7 @@ export interface IProject extends Document {
     dueDate: Date;
     completed: boolean;
   }];
+  tasks?: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
   deletedAt?: Date;
@@ -177,7 +179,7 @@ projectSchema.add({
   }]
 });
 
-projectSchema.query.notDeleted = function() {
+(projectSchema.query as any).notDeleted = function() {
   return this.where({ deletedAt: null });
 };
 

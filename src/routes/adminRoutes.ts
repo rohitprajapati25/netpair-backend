@@ -43,7 +43,7 @@ import {
  } from "../controllers/projectController.js";
 
 import multerConfig from '../middleware/multerConfig.js';
-const upload = multerConfig.default || multerConfig;
+const upload = multerConfig;
 
 router.get("/projects", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getProjects);
 // TODO: Add getProjectById controller
@@ -102,7 +102,7 @@ import {
 
 // ===== TASK ROUTES - Admin =====
 import { 
-  createTask, getTasks, updateTask, deleteTask, getTaskStats 
+  createTask, getTasks, updateTask, deleteTask, getTaskStats, updateTaskProgress, addTaskComment
 } from "../controllers/taskController.js";
 import { getTimesheets, approveTimesheet, deleteTimesheet } from "../controllers/timesheetController.js";
 
@@ -115,6 +115,8 @@ router.get("/assets/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADM
 router.post("/tasks", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), createTask);
 router.get("/tasks", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getTasks);
 router.put("/tasks/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateTask);
+router.put("/tasks/:id/progress", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPLOYEE), updateTaskProgress);
+router.post("/tasks/:id/comments", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPLOYEE), addTaskComment);
 router.delete("/tasks/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteTask);
 router.get("/tasks/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getTaskStats);
 

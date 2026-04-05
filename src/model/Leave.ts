@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { ROLES } from '../../../constants/roles.js';
+import { ROLES } from '../../constants/roles.js';
 
 export interface ILeave extends Document {
   employeeId: mongoose.Types.ObjectId;  // Reference to Employee
@@ -67,11 +67,11 @@ LeaveSchema.index({ approvedBy: 1 });
 
 // Calculate days automatically (pre-save)
 LeaveSchema.pre('save', function(next) {
-  if (this.fromDate && this.toDate) {
-    const diffTime = this.toDate.getTime() - this.fromDate.getTime();
-    this.days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;  // Inclusive days
+  if ((this as any).fromDate && (this as any).toDate) {
+    const diffTime = (this as any).toDate.getTime() - (this as any).fromDate.getTime();
+    (this as any).days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;  // Inclusive days
   }
-  next();
+  (next as any)();
 });
 
 export const Leave: Model<ILeave> = mongoose.model<ILeave>('Leave', LeaveSchema);

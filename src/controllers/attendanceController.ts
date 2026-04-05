@@ -97,6 +97,12 @@ export const markAttendance = async (req: Request, res: Response) => {
         message: 'Employee not found'
       });
     }
+    if (!employee.joiningDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee joining date not set'
+      });
+    }
     
     const joinDateStart = new Date(employee.joiningDate);
     joinDateStart.setHours(0,0,0,0);
@@ -123,7 +129,7 @@ export const markAttendance = async (req: Request, res: Response) => {
     if (existing) {
       return res.status(409).json({
         success: false,
-        message: `Employee "${existing.employee.name}" already has attendance for ${attendanceDate.toLocaleDateString('en-IN')}. Please EDIT the existing record.`
+        message: `Employee "${employee.name}" already has attendance for ${attendanceDate.toLocaleDateString('en-IN')}. Please EDIT the existing record.`
       });
     }
 
@@ -197,6 +203,13 @@ export const updateAttendance = async (req: Request, res: Response) => {
         return res.status(404).json({
           success: false,
           message: 'Employee not found'
+        });
+      }
+
+      if (!employee.joiningDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Employee joining date not set'
         });
       }
       

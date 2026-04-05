@@ -175,7 +175,6 @@ import Attendance from "../model/Attendance.js";
 import HR from "../model/HR.js";
 import Admin from "../model/Admin.js";
 import User from "../model/User.js";
-import { updateRoleUserStatus } from "../utils/roleSync.js";
 import { ROLES } from "../../constants/roles.js";
 
 
@@ -375,7 +374,7 @@ export const getEmployees = async (req: Request, res: Response) => {
       }
     ]).exec();
 
-    const statsMap = {};
+    const statsMap: Record<string, number> = {};
     attendanceStats.forEach(stat => {
       statsMap[stat._id.toString()] = stat.presentCount;
     });
@@ -393,7 +392,7 @@ export const getEmployees = async (req: Request, res: Response) => {
     // Convert to plain objects to allow adding virtual 'presentCount' field
     const employeesWithStats = employees.map(emp => {
       const empObj = emp.toObject();
-      empObj.presentCount = statsMap[emp._id.toString()] || 0;
+      (empObj as any).presentCount = statsMap[emp._id.toString()] || 0;
       return empObj;
     });
 
@@ -488,7 +487,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
     );
 
     // Socket emit for real-time
-    req.io?.emit('employeeUpdate', { id, status: updateData.status });
+    (req as any).io?.emit('employeeUpdate', { id, status: updateData.status });
 
     const populatedEmployee = await Employee.findById(id)
       .populate("createdBy", "name")
@@ -523,10 +522,10 @@ export const deleteEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    console.log('Delete request for ID:', id, 'User:', req.user?.id);
+    console.log('Delete request for ID:', id, 'User:', (req as any).user?.id);
 
     // 1. Get employee for sync
-    const employee = await Employee.findOne({ _id: id, createdBy: req.user.id }).select('email');
+    const employee = await Employee.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
     if (!employee) {
       return res.status(404).json({
         success: false,

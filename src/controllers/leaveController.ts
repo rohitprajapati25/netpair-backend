@@ -1,18 +1,15 @@
 import type { Request, Response } from "express";
+import mongoose from 'mongoose';
 import Leave, { ILeave } from "../model/Leave.js";
 import Employee from "../model/Employee.js";
 import Admin from "../model/Admin.js";
 import { ROLES } from "../../constants/roles.js";
 
-interface FilteredRequest extends Request {
-  user: { id: string; role: string };
-}
-
 // ================================
 // GET LEAVES - Admin/SuperAdmin Dashboard
 // Supports: search, status, type filters + pagination
 // ================================
-export const getLeaves = async (req: FilteredRequest, res: Response) => {
+export const getLeaves = async (req: Request, res: Response) => {
   try {
     const { 
       page = 1, 
@@ -87,7 +84,7 @@ export const getLeaves = async (req: FilteredRequest, res: Response) => {
 // UPDATE LEAVE STATUS - Approve/Reject
 // Admin/SuperAdmin only
 // ================================
-export const updateLeaveStatus = async (req: FilteredRequest, res: Response) => {
+export const updateLeaveStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -114,7 +111,7 @@ export const updateLeaveStatus = async (req: FilteredRequest, res: Response) => 
 
     // Update
     leave.status = status;
-    leave.approvedBy = req.user.id;
+    leave.approvedBy = new mongoose.Types.ObjectId((req as any).user.id);
     leave.approvedAt = new Date();
     await leave.save();
 
@@ -139,7 +136,7 @@ export const updateLeaveStatus = async (req: FilteredRequest, res: Response) => 
 // CREATE LEAVE - Employee/HR Apply
 // Added for completeness
 // ================================
-export const createLeave = async (req: FilteredRequest, res: Response) => {
+export const createLeave = async (req: Request, res: Response) => {
   try {
     const leaveData = req.body;
 
@@ -156,7 +153,7 @@ export const createLeave = async (req: FilteredRequest, res: Response) => {
 
     const newLeave = new Leave({
       ...leaveData,
-      employeeId: req.user.id  // Employee applying for self
+      employeeId: (req as any).user.id  // Employee applying for self
     });
 
     await newLeave.save();

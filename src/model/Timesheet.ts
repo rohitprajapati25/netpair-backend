@@ -51,7 +51,7 @@ const timesheetSchema = new Schema<ITimesheet>({
   work_description: {
     type: String,
     required: [true, "Work description required"],
-    maxlength: [2000]
+    maxlength: [2000, "Work description too long"]
   },
   status: {
     type: String,
@@ -74,9 +74,9 @@ timesheetSchema.index({ employee_id: 1, date: 1 });
 timesheetSchema.index({ project_id: 1, status: 1 });
 timesheetSchema.index({ date: -1 });
 
-timesheetSchema.query.notDeleted = function() {
-  return this.where({ deletedAt: null });
-};
+// (timesheetSchema.query as any).notDeleted = function() {
+  // return this.where({ deletedAt: null });
+ // };
 
 export default mongoose.model<ITimesheet>("Timesheet", timesheetSchema);
 

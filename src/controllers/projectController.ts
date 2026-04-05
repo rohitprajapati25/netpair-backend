@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Project from "../model/Project.js";
+import Task from "../model/Task.js";
+import Timesheet from "../model/Timesheet.js";
 import Employee from "../model/Employee.js";
 
 const sanitizeObjectId = (value: any): mongoose.Types.ObjectId | undefined => {
@@ -16,18 +18,54 @@ const sanitizeObjectId = (value: any): mongoose.Types.ObjectId | undefined => {
 
 export const getProjects = async (req: Request, res: Response) => {
   try {
+    console.log('📋 GET PROJECTS - Request received, user:', (req as any).user);
     const query: any = { deletedAt: null };
+    
+    // Handle filters from query params
+    const { search, status, priority, project_type, department, createdBy, page = 1, limit = 1000 } = req.query;
+    
+    if (search && search.toString().trim()) {
+      query.name = { $regex: search.toString().trim(), $options: 'i' };
+    }
+    
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+    
+    if (priority && priority !== 'All') {
+      query.priority = priority;
+    }
+    
+    if (project_type && project_type !== 'All') {
+      query.project_type = project_type;
+    }
+    
+    if (department && department.toString().trim()) {
+      query.company = { $regex: department.toString().trim(), $options: 'i' };
+    }
+    
+    if (createdBy && createdBy !== 'All') {
+      query.createdBy = createdBy;
+    }
+    
+    console.log('📋 Query filters:', query);
     
     const projects = await Project.find(query)
       .populate('projectOwnerId manager createdBy assignedEmployees', 'name designation department role email')
-      .sort({ startDate: -1 });
+      .sort({ startDate: -1 })
+      .limit(parseInt(limit.toString()))
+      .skip((parseInt(page.toString()) - 1) * parseInt(limit.toString()));
+    
+    console.log('📋 Found projects:', projects.length);
+    console.log('📋 First project sample:', projects[0] ? { name: projects[0].name, _id: projects[0]._id } : 'No projects');
     
     res.json({
       success: true,
       projects,
-      pagination: { total: projects.length }
+      pagination: { total: projects.length, page: parseInt(page.toString()), limit: parseInt(limit.toString()) }
     });
   } catch (error: any) {
+    console.error('❌ Get projects error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -40,12 +78,17 @@ export const createProject = async (req: Request, res: Response) => {
     const user = (req as any).user;
     const year = new Date().getFullYear();
     
-    // Atomic project code generation
-    let count = await Project.countDocuments({ 
-      projectCode: { $regex: `^PRJ-${year}-` }, 
-      deletedAt: null 
-    });
-    count++;
+    // Safe project code generation - find the highest number used
+    const lastProject = await Project.findOne({ 
+      projectCode: { $regex: `^PRJ-${year}-` } 
+    }).sort({ projectCode: -1 });
+    
+    let count = 1;
+    if (lastProject) {
+      const parts = lastProject.projectCode.split('-');
+      const lastNum = parts.length >= 3 ? parseInt(parts[2] || '0') : 0;
+      count = lastNum + 1;
+    }
     let projectCode = `PRJ-${year}-${String(count).padStart(4, '0000')}`;
     
     // Backup loop
@@ -84,8 +127,8 @@ const bodyData = req.body;
       
       // Filter + sanitize valid ObjectIds only
       assignedEmployeesFinal = parsedIds
-        .filter(id => id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id))
-        .map(id => new mongoose.Types.ObjectId(id))
+        .filter((id: any) => id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id))
+        .map((id: any) => new mongoose.Types.ObjectId(id))
         .slice(0, 100); // Sanity limit
       
       console.log('Parsed assignedEmployees:', assignedEmployeesFinal.length);
@@ -98,7 +141,7 @@ const bodyData = req.body;
       manager: sanitizeObjectId(bodyData.manager),
       projectCode,
       createdBy: user.id,
-      ...(req.files ? { attachments: (req.files as any[]).map((f: any) => ({
+      ...( (req as any).files ? { attachments: ((req as any).files as any[]).map((f: any) => ({
         filename: f.originalname,
         path: f.path
       })) } : {})
@@ -127,15 +170,45 @@ export const getProjectStats = async (req: Request, res: Response) => {
   try {
     console.log('🟢 📈 getProjectStats HIT');
     
-    const total = await Project.countDocuments({ deletedAt: { $eq: null } });
+    // Build query with same filters as getProjects
+    const query: any = { deletedAt: null };
+    const { search, status, priority, project_type, department, createdBy } = req.query;
+    
+    if (search && search.toString().trim()) {
+      query.name = { $regex: search.toString().trim(), $options: 'i' };
+    }
+    
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+    
+    if (priority && priority !== 'All') {
+      query.priority = priority;
+    }
+    
+    if (project_type && project_type !== 'All') {
+      query.project_type = project_type;
+    }
+    
+    if (department && department.toString().trim()) {
+      query.company = { $regex: department.toString().trim(), $options: 'i' };
+    }
+    
+    if (createdBy && createdBy !== 'All') {
+      query.createdBy = createdBy;
+    }
+    
+    console.log('Stats query:', query);
+    
+    const total = await Project.countDocuments(query);
     console.log('Total projects:', total);
     
     // Simple count queries - NO aggregate
-    const pending = await Project.countDocuments({ deletedAt: { $eq: null }, status: 'Pending' });
-    const ongoing = await Project.countDocuments({ deletedAt: { $eq: null }, status: 'Ongoing' });
-    const completed = await Project.countDocuments({ deletedAt: { $eq: null }, status: 'Completed' });
-    const onHold = await Project.countDocuments({ deletedAt: { $eq: null }, status: 'On Hold' });
-    const cancelled = await Project.countDocuments({ deletedAt: { $eq: null }, status: 'Cancelled' });
+    const pending = await Project.countDocuments({ ...query, status: 'Pending' });
+    const ongoing = await Project.countDocuments({ ...query, status: 'Ongoing' });
+    const completed = await Project.countDocuments({ ...query, status: 'Completed' });
+    const onHold = await Project.countDocuments({ ...query, status: 'On Hold' });
+    const cancelled = await Project.countDocuments({ ...query, status: 'Cancelled' });
 
     const stats = {
       total,
@@ -163,7 +236,7 @@ export const getProjectLogs = async (req: Request, res: Response) => {
     console.log('🟢 🔍 getProjectLogs HIT - superadmin');
     
     // Raw count first
-    const count = await Project.countDocuments({ deletedAt: { $eq: null } });
+    const count = await Project.countDocuments({ deletedAt: null });
     console.log('Projects found:', count);
     
     if (count === 0) {
@@ -172,7 +245,7 @@ export const getProjectLogs = async (req: Request, res: Response) => {
     }
     
     // Ultra-safe query - no populate
-    const logs = await Project.find({ deletedAt: { $eq: null } })
+    const logs = await Project.find({ deletedAt: null })
       .select('name projectCode status progress createdBy updatedBy createdAt updatedAt')
       .sort({ updatedAt: -1 })
       .limit(50)
@@ -248,11 +321,74 @@ export const updateProject = async (req: Request, res: Response) => {
 };
 
 export const deleteProject = async (req: Request, res: Response) => {
+  console.log('🗑️ DELETE PROJECT - Request received for ID:', req.params.id);
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
   try {
-    await Project.findByIdAndUpdate(req.params.id, { deletedAt: new Date() });
-    res.json({ success: true, message: 'Project soft deleted' });
+    const projectId = req.params.id;
+    console.log('🔍 Looking for project:', projectId);
+    
+    // Validate project exists and not already deleted
+    const project = await Project.findOne({ _id: projectId, deletedAt: null }).session(session);
+    console.log('📋 Project found:', project ? project.name : 'NOT FOUND');
+    
+    if (!project) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Project not found or already deleted' 
+      });
+    }
+
+    // Cascade soft delete Tasks
+    console.log('🗂️ Deleting associated tasks...');
+    const taskResult = await Task.updateMany(
+      { project_id: projectId, deletedAt: null }, 
+      { deletedAt: new Date() },
+      { session }
+    );
+    console.log('✅ Tasks deleted:', taskResult.modifiedCount);
+
+    // Cascade soft delete Timesheets  
+    console.log('⏰ Deleting associated timesheets...');
+    const timesheetResult = await Timesheet.updateMany(
+      { project_id: projectId, deletedAt: null },
+      { deletedAt: new Date() },
+      { session }
+    );
+    console.log('✅ Timesheets deleted:', timesheetResult.modifiedCount);
+
+    // Soft delete Project
+    console.log('📁 Deleting project...');
+    const projectResult = await Project.findByIdAndUpdate(
+      projectId, 
+      { deletedAt: new Date() },
+      { session, new: true }
+    );
+    console.log('✅ Project deleted:', projectResult ? 'SUCCESS' : 'FAILED');
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Count affected records for accurate message
+    const taskCount = await Task.countDocuments({ project_id: projectId, deletedAt: new Date(new Date().getTime() - 60000) }); // Recent deletes
+    const timesheetCount = await Timesheet.countDocuments({ project_id: projectId, deletedAt: new Date(new Date().getTime() - 60000) });
+    
+    res.json({ 
+      success: true, 
+      message: `Project "${project.name}" and ${taskCount} tasks/${timesheetCount} timesheets soft deleted successfully`,
+      deleted: { project: 1, tasks: taskCount, timesheets: timesheetCount }
+    });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Delete project error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Delete failed: ' + error.message 
+    });
   }
 };
 

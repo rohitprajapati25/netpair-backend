@@ -18,11 +18,13 @@ import { createLeave } from "../controllers/leaveController.js";
 router.post("/leaves", protect, authorizeRoles(ROLES.EMPLOYEE, ROLES.HR), createLeave);
 
 // ===== TASK & TIMESHEET - Employee =====
-import { getTasks, updateTask, deleteTask } from "../controllers/taskController.js";
+import { getTasks, updateTask, deleteTask, updateTaskProgress, addTaskComment } from "../controllers/taskController.js";
 import { submitTimesheet, deleteTimesheet } from "../controllers/timesheetController.js";
 
 router.get("/tasks", protect, authorizeRoles(ROLES.EMPLOYEE), getTasks); // My assigned tasks
 router.put("/tasks/:id", protect, authorizeRoles(ROLES.EMPLOYEE), updateTask);
+router.put("/tasks/:id/progress", protect, authorizeRoles(ROLES.EMPLOYEE), updateTaskProgress);
+router.post("/tasks/:id/comments", protect, authorizeRoles(ROLES.EMPLOYEE), addTaskComment);
 router.delete("/tasks/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteTask);
 router.post("/timesheets", protect, authorizeRoles(ROLES.EMPLOYEE), submitTimesheet);
 router.delete("/timesheets/:id", protect, authorizeRoles(ROLES.EMPLOYEE), deleteTimesheet);

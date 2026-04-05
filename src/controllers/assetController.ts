@@ -101,15 +101,14 @@ export const updateAsset = async (req: Request, res: Response) => {
       if (!employee) return res.status(400).json({ success: false, message: 'Employee not found' });
     }
 
-    const updated = await Asset.findByIdAndUpdate(
-      id,
+    const updated = await Asset.findOneAndUpdate(
+      { _id: id, deletedAt: null },
       {
         ...updates,
         updatedBy: new mongoose.Types.ObjectId(user.id)
       },
       { new: true, runValidators: true }
-    )?.notDeleted()
-    .populate('assignedTo createdBy updatedBy', 'name designation department');
+    ).populate('assignedTo createdBy updatedBy', 'name designation department');
 
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Asset not found' });

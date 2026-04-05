@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 
 const connectDb = async () => {
-    const uri = process.env.MONGO_URI;
+    const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/ims';
     if (!uri) {
         console.error("MONGO_URI not set in environment");
         throw new Error("Missing MONGO_URI");

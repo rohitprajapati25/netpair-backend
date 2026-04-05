@@ -166,7 +166,7 @@ employeeSchema.index({ status: 1 });
 employeeSchema.index({ createdAt: -1 });
 
 // ✅ Query middleware to exclude soft-deleted documents
-employeeSchema.query.notDeleted = function () {
+(employeeSchema.query as any).notDeleted = function () {
   return this.where({ deletedAt: { $eq: null } });
 };
 

@@ -16,7 +16,7 @@ export const submitTimesheet = async (req: Request, res: Response) => {
       date: new Date(date),
       project_id,
       task_id: (task_id && mongoose.Types.ObjectId.isValid(task_id)) ? task_id : null,
-      employee_id: req.user!.employeeId || req.user!.id,
+      employee_id: (req as any).user!.employeeId || (req as any).user!.id,
       hours_worked,
       work_description,
       status: TIMESHEET_STATUS.SUBMITTED
@@ -36,8 +36,8 @@ export const getTimesheets = async (req: Request, res: Response) => {
     const { employee_id, status, date, page = 1, limit = 10 } = req.query;
     const query: any = { deletedAt: null };
 
-    if (employee_id || req.user!.role === 'employee') {
-      query.employee_id = employee_id || req.user!.employeeId || req.user!.id;
+    if (employee_id || (req as any).user!.role === 'employee') {
+      query.employee_id = employee_id || (req as any).user!.employeeId || (req as any).user!.id;
     }
     if (status) query.status = status;
     if (date) query.date = { $gte: new Date(date as string), $lte: new Date((date as string) + 'T23:59:59') };
@@ -73,7 +73,7 @@ export const approveTimesheet = async (req: Request, res: Response) => {
 
     timesheet.status = status as TIMESHEET_STATUS;
     if (status === TIMESHEET_STATUS.APPROVED) {
-      timesheet.approved_by = req.user!.id;
+      timesheet.approved_by = new mongoose.Types.ObjectId((req as any).user!.id);
     } else {
       timesheet.rejection_reason = rejection_reason;
     }
@@ -119,12 +119,12 @@ export const deleteTimesheet = async (req: Request, res: Response) => {
     const query: any = { _id: id, deletedAt: null };
 
     // If employee, can only delete their own submitted (not approved/rejected) timesheets
-    if (req.user!.role === 'employee') {
-      query.employee_id = req.user!.employeeId || req.user!.id;
+    if ((req as any).user!.role === 'employee') {
+      query.employee_id = (req as any).user!.employeeId || (req as any).user!.id;
       query.status = TIMESHEET_STATUS.SUBMITTED;
     }
 
-    const timesheet = await Timesheet.findOneAndUpdate(query, { deletedAt: new Date() });
+    const timesheet = await Timesheet.findByIdAndDelete(id);
     if (!timesheet) return res.status(404).json({ success: false, message: "Timesheet not found or cannot be deleted" });
 
     res.json({ success: true, message: "Timesheet deleted" });

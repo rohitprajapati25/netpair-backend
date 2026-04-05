@@ -27,7 +27,11 @@ export interface ITask extends Document {
   start_date: Date;
   due_date: Date;
   status: TASK_STATUS;
-  comments?: string[]; // Array of {text, by, at}
+  comments?: Array<{
+    text: string;
+    by: mongoose.Types.ObjectId;
+    createdAt: Date;
+  }>; // Array of comment objects
   progress?: number; // 0-100
   created_at: Date;
   updated_at: Date;
@@ -99,9 +103,9 @@ taskSchema.index({ assigned_to: 1 });
 taskSchema.index({ due_date: 1 });
 taskSchema.index({ status: 1, priority: 1 });
 
-taskSchema.query.notDeleted = function() {
-  return this.where({ deletedAt: null });
-};
+// (taskSchema.query as any).notDeleted = function() {
+  // return this.where({ deletedAt: null });
+ // };
 
 export default mongoose.model<ITask>("Task", taskSchema);
 

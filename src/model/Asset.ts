@@ -41,7 +41,7 @@ const assetSchema = new Schema<IAsset>({
     type: String,
     required: [true, "Asset name required"],
     trim: true,
-    maxlength: [100]
+    maxlength: [100, "Name too long"]
   },
   category: {
     type: String,
@@ -90,7 +90,7 @@ const assetSchema = new Schema<IAsset>({
 assetSchema.index({ category: 1, status: 1 });
 
 
-assetSchema.query.notDeleted = function() {
+(assetSchema.query as any).notDeleted = function() {
   return this.where({ deletedAt: null });
 };
 
