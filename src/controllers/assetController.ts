@@ -1,12 +1,25 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import Asset, { IAsset } from "../model/Asset.js";
+import Joi from "joi";
+import Asset, { IAsset, ASSET_CATEGORY, ASSET_STATUS } from "../model/Asset.js";
 import Employee from "../model/Employee.js";
 
 const generateAssetId = async (): Promise<string> => {
-  const count = await Asset.countDocuments({ deletedAt: null });
-  return `AST-${String(count + 1).padStart(3, '0')}`;
+  // Find max existing seq and increment
+  const maxAsset = await Asset.findOne({ assetId: { $regex: /^AST-\d{3}$/ } })
+    .sort({ assetId: -1 })
+    .select('assetId');
+    
+  let nextSeq = 1;
+  if (maxAsset) {
+    const match = maxAsset.assetId.match(/AST-(\d{3})/);
+    if (match) nextSeq = parseInt(match[1]) + 1;
+  }
+  
+  return `AST-${String(nextSeq).padStart(3, '0')}`;
 };
+
+
 
 export const getAssets = async (req: Request, res: Response) => {
   try {
@@ -48,8 +61,27 @@ export const getAssets = async (req: Request, res: Response) => {
 
 export const createAsset = async (req: Request, res: Response) => {
   try {
-    const { name, category, serialNumber, purchaseDate, assignedTo, status, location, notes } = req.body;
+const { name, category, serialNumber, purchaseDate, assignedTo, status, location, notes } = req.body;
     const user = (req as any).user;
+
+    const schema = Joi.object({
+      name: Joi.string().trim().min(1).max(100).required(),
+      category: Joi.string().allow(...Object.values(ASSET_CATEGORY)).required(),
+      status: Joi.string().allow(...Object.values(ASSET_STATUS)).required(),
+      serialNumber: Joi.string().trim().max(50).allow(""),
+      purchaseDate: Joi.date().max(Date.now()).allow(null),
+      assignedTo: Joi.string().allow('').allow(null),
+      location: Joi.string().trim().max(100).allow(""),
+      notes: Joi.string().trim().max(1000).allow("")
+    });
+
+    const { error: validationError } = schema.validate(req.body);
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError.details[0].message
+      });
+    }
 
     const assetId = await generateAssetId();
 
@@ -59,7 +91,7 @@ export const createAsset = async (req: Request, res: Response) => {
       category,
       serialNumber: serialNumber?.trim() || undefined,
       purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
-      assignedTo: assignedTo ? new mongoose.Types.ObjectId(assignedTo) : undefined,
+      assignedTo: assignedTo?.trim() ? new mongoose.Types.ObjectId(assignedTo.trim()) : undefined,
       status: status as any || 'Available',
       location: location?.trim() || undefined,
       notes: notes?.trim() || undefined,
@@ -67,8 +99,8 @@ export const createAsset = async (req: Request, res: Response) => {
     };
 
     // Validate assignedTo if provided
-    if (assignedTo) {
-      const employee = await Employee.findById(assignedTo);
+    if (assignedTo?.trim()) {
+      const employee = await Employee.findById(assignedTo.trim());
       if (!employee) {
         return res.status(400).json({ success: false, message: 'Employee not found' });
       }
@@ -85,6 +117,12 @@ export const createAsset = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Create asset error:', error);
+    if (error.code === 11000 || error.code === 11001) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Asset ID conflict detected. Please try again.' 
+      });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -92,12 +130,15 @@ export const createAsset = async (req: Request, res: Response) => {
 export const updateAsset = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid asset ID' });
+    }
     const updates = req.body;
     const user = (req as any).user;
 
     // Validate assignedTo if changing
-    if (updates.assignedTo) {
-      const employee = await Employee.findById(updates.assignedTo);
+    if (updates.assignedTo?.trim()) {
+      const employee = await Employee.findById(updates.assignedTo.trim());
       if (!employee) return res.status(400).json({ success: false, message: 'Employee not found' });
     }
 
@@ -127,6 +168,9 @@ export const updateAsset = async (req: Request, res: Response) => {
 export const deleteAsset = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid asset ID' });
+    }
     await Asset.findByIdAndUpdate(id, { deletedAt: new Date() });
     res.json({ success: true, message: 'Asset soft deleted' });
   } catch (error: any) {

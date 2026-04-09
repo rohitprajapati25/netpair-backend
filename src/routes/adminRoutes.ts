@@ -105,6 +105,8 @@ import {
   createTask, getTasks, updateTask, deleteTask, getTaskStats, updateTaskProgress, addTaskComment
 } from "../controllers/taskController.js";
 import { getTimesheets, approveTimesheet, deleteTimesheet } from "../controllers/timesheetController.js";
+import { getUnifiedReports } from "../controllers/reportsController-fixed.js";
+import { getDashboardStats, getDashboardActivity } from "../controllers/dashboardController.js";
 
 router.get("/assets", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getAssets);
 router.post("/assets", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), createAsset);
@@ -120,8 +122,21 @@ router.post("/tasks/:id/comments", protect, authorizeRoles(ROLES.SUPER_ADMIN, RO
 router.delete("/tasks/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteTask);
 router.get("/tasks/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getTaskStats);
 
+import { updateProfile, changePassword, getProfile } from "../controllers/settingsController.js";
+
+router.get("/profile", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getProfile);
+router.put("/profile", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateProfile);
+router.post("/password", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), changePassword);
+
+
+
 router.get("/timesheets", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getTimesheets);
 router.put("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), approveTimesheet);
 router.delete("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), deleteTimesheet);
+
+router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getUnifiedReports);
+
+router.get("/dashboard/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getDashboardStats);
+router.get("/dashboard/activity", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getDashboardActivity);
 
 export default router;

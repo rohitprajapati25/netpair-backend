@@ -13,6 +13,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/joi": "^17.2.2",
     "@types/socket.io": "^3.0.1",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
@@ -20,6 +21,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "fs-extra": "^11.3.4",
+    "joi": "^18.1.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.3",
     "multer": "^2.1.1",

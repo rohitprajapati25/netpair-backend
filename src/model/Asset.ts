@@ -46,7 +46,7 @@ const assetSchema = new Schema<IAsset>({
   category: {
     type: String,
     enum: Object.values(ASSET_CATEGORY),
-    required: true
+    required: [true, 'Category is required']
   },
   serialNumber: {
     type: String,
