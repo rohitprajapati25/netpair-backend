@@ -16,6 +16,8 @@ export interface IUser extends Document {
     isFirstLogin: boolean;
     createdBy?: mongoose.Types.ObjectId;
     deletedAt?: Date;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
 }
 declare const _default: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser, {}, mongoose.DefaultSchemaOptions> & IUser & Required<{
     _id: mongoose.Types.ObjectId;

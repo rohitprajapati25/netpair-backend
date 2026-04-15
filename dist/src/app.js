@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
 import http from 'http';
 import cluster from 'cluster';
 import { initSocket } from './socket.js';
@@ -14,6 +17,10 @@ const server = http.createServer(app);
 // Trust proxy — required for correct req.ip behind nginx/load balancer
 // Also fixes ::ffff:127.0.0.1 → 127.0.0.1 on localhost
 app.set("trust proxy", true);
+// ── Security Middleware ──────────────────────────────────────────────────────
+app.use(helmet());
+app.use(mongoSanitize());
+app.use(hpp());
 // ── Socket.io ────────────────────────────────────────────────────────────────
 initSocket(server);
 // ── CORS ─────────────────────────────────────────────────────────────────────

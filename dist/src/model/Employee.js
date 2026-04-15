@@ -107,6 +107,8 @@ const employeeSchema = new Schema({
         type: Boolean,
         default: true,
     },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     // Status & Metadata
     status: {
         type: String,

@@ -1,31 +1,27 @@
 import dotenv from 'dotenv';
-dotenv.config();
-import cluster from 'cluster';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { server } from './app.js';
 import connectDb from './db/db.js';
 import { superAdmin } from "./utils/superAdmin.js";
-const PORT = parseInt(process.env.PORT || "5000");
-const WORKER_ID = cluster.worker?.id ?? "standalone";
-connectDb()
-    .then(() => {
-    // Only seed superAdmin from worker 1 (or standalone) to avoid duplicate seeding
-    if (WORKER_ID === 1 || WORKER_ID === "standalone") {
-        superAdmin();
+const startServer = async () => {
+    try {
+        await connectDb();
+        console.log("✅ MongoDB Connected!");
+        await superAdmin();
+        console.log("✅ SuperAdmin Ready!");
+        const PORT = process.env.PORT || 5000;
+        server.listen(PORT, () => {
+            console.log(`🚀 Server + Socket.io running on http://localhost:${PORT}`);
+            console.log("⚡ Real-time employee sync enabled!");
+        });
     }
-    server.listen(PORT, () => {
-        console.log(`🚀 Worker [${WORKER_ID}] running on http://localhost:${PORT}`);
-    });
-})
-    .catch((err) => {
-    console.error(`❌ Worker [${WORKER_ID}] failed to start:`, err);
-    process.exit(1);
-});
-// Graceful shutdown for this worker
-process.on("SIGTERM", () => {
-    console.log(`🛑 Worker [${WORKER_ID}] shutting down gracefully...`);
-    server.close(() => {
-        console.log(`✅ Worker [${WORKER_ID}] closed all connections`);
-        process.exit(0);
-    });
-});
+    catch (error) {
+        console.error('💥 Startup Error:', error);
+        process.exit(1);
+    }
+};
+startServer();
 //# sourceMappingURL=server.js.map

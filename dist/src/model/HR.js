@@ -46,6 +46,8 @@ const hrSchema = new Schema({
         default: ROLES.INACTIVE
     },
     isFirstLogin: { type: Boolean, default: true },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',

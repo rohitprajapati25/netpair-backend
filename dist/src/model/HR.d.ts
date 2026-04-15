@@ -14,6 +14,8 @@ export interface IHR extends Document {
     status: string;
     isFirstLogin: boolean;
     createdBy: mongoose.Types.ObjectId;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
 }
 declare const _default: mongoose.Model<IHR, {}, {}, {}, mongoose.Document<unknown, {}, IHR, {}, mongoose.DefaultSchemaOptions> & IHR & Required<{
     _id: mongoose.Types.ObjectId;

@@ -12,6 +12,8 @@ export interface IAdmin extends Document {
     status: string;
     isFirstLogin: boolean;
     createdBy: mongoose.Types.ObjectId;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
 }
 declare const _default: mongoose.Model<IAdmin, {}, {}, {}, mongoose.Document<unknown, {}, IAdmin, {}, mongoose.DefaultSchemaOptions> & IAdmin & Required<{
     _id: mongoose.Types.ObjectId;

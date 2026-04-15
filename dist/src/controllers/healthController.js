@@ -21,15 +21,19 @@ export const getSystemHealth = async (req, res) => {
         const now = Date.now();
         // ── 1. Database health ──────────────────────────────────────────────────
         const dbState = mongoose.connection.readyState;
-        const dbStatus = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' }[dbState] || 'unknown';
+        const dbStatusMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+        const dbStatus = dbStatusMap[dbState] || 'unknown';
         const dbHealthy = dbState === 1;
         // DB ping latency
         let dbLatency = -1;
-        if (dbHealthy) {
+        if (dbHealthy && mongoose.connection.db) {
             const dbStart = Date.now();
             try {
-                await mongoose.connection.db?.admin().ping();
-                dbLatency = Date.now() - dbStart;
+                const admin = mongoose.connection.db.admin();
+                if (admin) {
+                    await admin.ping();
+                    dbLatency = Date.now() - dbStart;
+                }
             }
             catch {
                 dbLatency = -1;
@@ -60,8 +64,11 @@ export const getSystemHealth = async (req, res) => {
             setTimeout(() => {
                 const end = os.cpus().map(c => ({ idle: c.times.idle, total: Object.values(c.times).reduce((a, b) => a + b, 0) }));
                 const usage = start.map((s, i) => {
-                    const idleDiff = end[i].idle - s.idle;
-                    const totalDiff = end[i].total - s.total;
+                    const currentCpu = end[i];
+                    if (!currentCpu)
+                        return 0;
+                    const idleDiff = currentCpu.idle - s.idle;
+                    const totalDiff = currentCpu.total - s.total;
                     return totalDiff === 0 ? 0 : Math.round((1 - idleDiff / totalDiff) * 100);
                 });
                 resolve(Math.round(usage.reduce((a, b) => a + b, 0) / usage.length));

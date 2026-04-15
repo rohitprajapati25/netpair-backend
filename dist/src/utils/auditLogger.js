@@ -4,9 +4,11 @@ const getClientIP = (req) => {
     const forwarded = req.headers["x-forwarded-for"];
     if (forwarded) {
         const first = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(",")[0];
-        const clean = first.trim().replace(/^::ffff:/, "");
-        if (clean)
-            return clean;
+        if (first) {
+            const clean = first.trim().replace(/^::ffff:/, "");
+            if (clean)
+                return clean;
+        }
     }
     const ip = req.ip || req.socket?.remoteAddress || "";
     if (ip.startsWith("::ffff:"))

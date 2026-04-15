@@ -23,6 +23,8 @@ const userSchema = new mongoose.Schema({
         default: ROLES.INACTIVE,
     },
     isFirstLogin: { type: Boolean, default: true },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

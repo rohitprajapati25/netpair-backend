@@ -79,7 +79,7 @@ export const createAsset = async (req: Request, res: Response) => {
     if (validationError) {
       return res.status(400).json({
         success: false,
-        message: validationError.details[0].message
+        message: validationError.details[0]?.message || 'Validation error'
       });
     }
 

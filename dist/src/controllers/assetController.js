@@ -8,9 +8,9 @@ const generateAssetId = async () => {
         .sort({ assetId: -1 })
         .select('assetId');
     let nextSeq = 1;
-    if (maxAsset) {
+    if (maxAsset && maxAsset.assetId) {
         const match = maxAsset.assetId.match(/AST-(\d{3})/);
-        if (match)
+        if (match && match[1])
             nextSeq = parseInt(match[1]) + 1;
     }
     return `AST-${String(nextSeq).padStart(3, '0')}`;
@@ -70,7 +70,7 @@ export const createAsset = async (req, res) => {
         if (validationError) {
             return res.status(400).json({
                 success: false,
-                message: validationError.details[0].message
+                message: validationError.details[0]?.message || 'Validation error'
             });
         }
         const assetId = await generateAssetId();
@@ -84,7 +84,7 @@ export const createAsset = async (req, res) => {
             status: status || 'Available',
             location: location?.trim() || undefined,
             notes: notes?.trim() || undefined,
-            createdBy: new mongoose.Types.ObjectId(user.id)
+            createdBy: new mongoose.Types.ObjectId(user?.id ? String(user.id) : undefined)
         };
         // Validate assignedTo if provided
         if (assignedTo?.trim()) {

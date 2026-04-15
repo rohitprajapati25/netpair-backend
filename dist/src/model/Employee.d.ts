@@ -17,6 +17,8 @@ export interface IEmployee extends Document {
     deletedAt?: Date;
     createdAt?: Date;
     updatedAt?: Date;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
 }
 declare const _default: mongoose.Model<IEmployee, {}, {}, {}, mongoose.Document<unknown, {}, IEmployee, {}, mongoose.DefaultSchemaOptions> & IEmployee & Required<{
     _id: mongoose.Types.ObjectId;

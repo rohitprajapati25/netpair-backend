@@ -11,12 +11,16 @@ router.put("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES
 router.delete("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteEmployee);
 router.post("/login", loginEmployee);
 // ===== EMPLOYEE LEAVE APPLY =====
-import { createLeave, getLeaves } from "../controllers/leaveController.js";
+import { createLeave, getLeaves, cancelLeave } from "../controllers/leaveController.js";
 router.post("/leaves", protect, authorizeRoles(ROLES.EMPLOYEE, ROLES.HR), createLeave);
 router.get("/leaves", protect, authorizeRoles(ROLES.EMPLOYEE), getLeaves); // My own leaves
+router.delete("/leaves/:id", protect, authorizeRoles(ROLES.EMPLOYEE), cancelLeave);
 // ===== EMPLOYEE ATTENDANCE =====
-import { getAttendanceRecords } from "../controllers/attendanceController.js";
-router.get("/attendance", protect, authorizeRoles(ROLES.EMPLOYEE), getAttendanceRecords); // My own attendance
+import { getAttendanceRecords, checkIn, checkOut, getTodayStatus } from "../controllers/attendanceController.js";
+router.get("/attendance", protect, authorizeRoles(ROLES.EMPLOYEE), getAttendanceRecords);
+router.get("/attendance/today", protect, authorizeRoles(ROLES.EMPLOYEE), getTodayStatus);
+router.post("/attendance/checkin", protect, authorizeRoles(ROLES.EMPLOYEE), checkIn);
+router.post("/attendance/checkout", protect, authorizeRoles(ROLES.EMPLOYEE), checkOut);
 // ===== TASK & TIMESHEET - Employee =====
 import { getTasks, updateTask, deleteTask, updateTaskProgress, addTaskComment } from "../controllers/taskController.js";
 import { submitTimesheet, getTimesheets, deleteTimesheet } from "../controllers/timesheetController.js";

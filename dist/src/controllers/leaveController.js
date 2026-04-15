@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Leave from "../model/Leave.js";
+import Employee from "../model/Employee.js";
 import { auditLog } from "../utils/auditLogger.js";
 // ================================
 // GET LEAVES - Admin/SuperAdmin Dashboard
@@ -156,6 +157,33 @@ export const createLeave = async (req, res) => {
     catch (error) {
         console.error('CREATE_LEAVE_ERROR:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+// ================================
+// CANCEL LEAVE - Employee cancels own pending leave
+// ================================
+export const cancelLeave = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const leave = await Leave.findById(id);
+        if (!leave)
+            return res.status(404).json({ success: false, message: "Leave not found" });
+        // Only allow cancelling own pending leaves
+        const UserModel = await import("../model/User.js").then(m => m.default);
+        const user = await UserModel.findById(userId).select("email");
+        const empByEmail = await Employee.findOne({ email: user?.email });
+        if (!empByEmail || leave.employeeId.toString() !== empByEmail._id.toString()) {
+            return res.status(403).json({ success: false, message: "Not authorized to cancel this leave" });
+        }
+        if (leave.status !== "Pending") {
+            return res.status(400).json({ success: false, message: `Cannot cancel a ${leave.status} leave request` });
+        }
+        await Leave.findByIdAndDelete(id);
+        res.json({ success: true, message: "Leave request cancelled successfully" });
+    }
+    catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 //# sourceMappingURL=leaveController.js.map

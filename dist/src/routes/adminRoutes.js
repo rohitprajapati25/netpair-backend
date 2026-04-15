@@ -11,7 +11,7 @@ import multerConfig from '../middleware/multerConfig.js';
 import { getAssets, createAsset, updateAsset, deleteAsset, getAssetStats } from "../controllers/assetController.js";
 import { createTask, getTasks, updateTask, deleteTask, getTaskStats, updateTaskProgress, addTaskComment } from "../controllers/taskController.js";
 import { getTimesheets, approveTimesheet, deleteTimesheet } from "../controllers/timesheetController.js";
-import { getUnifiedReports as getUnifiedReportsFixed } from '../controllers/reportsController-fixed.js';
+import { getUnifiedReports } from '../controllers/reportsController.js';
 import { getDashboardStats, getDashboardActivity, getDashboardAttendanceTrend } from "../controllers/dashboardController.js";
 import { getSystemHealth } from "../controllers/healthController.js";
 import { getAnnouncements, createAnnouncement, deleteAnnouncement } from "../controllers/announcementController.js";
@@ -20,7 +20,6 @@ const router = express.Router();
 const upload = multerConfig;
 // ===== EMPLOYEE ROUTES =====
 router.post("/employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), createEmployee);
-// HR needs employee list for leave/attendance management
 router.get("/employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getEmployees);
 router.get("/active-employees", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getActiveEmployees);
 router.get("/companies", protect, authorizeRoles(ROLES.SUPER_ADMIN), getCompanies);
@@ -42,7 +41,8 @@ router.put("/leaves/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN
 // Static routes BEFORE parameterized routes
 router.get("/projects/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getProjectStats);
 router.get("/projects/logs", protect, authorizeRoles(ROLES.SUPER_ADMIN), getProjectLogs);
-router.get("/projects", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getProjects);
+// Employee can READ projects (needed for timesheet modal & my-projects page)
+router.get("/projects", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getProjects);
 router.post("/projects", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), upload.array('attachments', 5), createProject);
 router.get("/projects/:id/progress", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), async (req, res) => {
     try {
@@ -103,11 +103,17 @@ router.get("/timesheets", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN
 router.put("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), approveTimesheet);
 router.delete("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), deleteTimesheet);
 // ===== REPORTS =====
-router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getUnifiedReportsFixed);
+router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getUnifiedReports);
 // ===== ANNOUNCEMENTS =====
 router.get("/announcements", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getAnnouncements);
 router.post("/announcements", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), createAnnouncement);
 router.delete("/announcements/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteAnnouncement);
+// ===== HOLIDAYS / CALENDAR =====
+import { getHolidays, createHoliday, updateHoliday, deleteHoliday } from "../controllers/holidayController.js";
+router.get("/holidays", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getHolidays);
+router.post("/holidays", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), createHoliday);
+router.put("/holidays/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateHoliday);
+router.delete("/holidays/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteHoliday);
 // ===== DASHBOARD =====
 router.get("/dashboard/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getDashboardStats);
 router.get("/dashboard/activity", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getDashboardActivity);
