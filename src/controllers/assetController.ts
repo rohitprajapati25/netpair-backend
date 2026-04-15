@@ -11,9 +11,9 @@ const generateAssetId = async (): Promise<string> => {
     .select('assetId');
     
   let nextSeq = 1;
-  if (maxAsset) {
-    const match = maxAsset.assetId.match(/AST-(\d{3})/);
-    if (match) nextSeq = parseInt(match[1]) + 1;
+  if (maxAsset && maxAsset.assetId) {
+    const match = (maxAsset.assetId as string).match(/AST-(\d{3})/);
+    if (match && match[1]) nextSeq = parseInt(match[1]) + 1;
   }
   
   return `AST-${String(nextSeq).padStart(3, '0')}`;

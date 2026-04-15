@@ -170,7 +170,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     const resetPasswordToken = crypto
       .createHash('sha256')
-      .update(tokenStr)
+      .update(String(tokenStr))
       .digest('hex');
 
     // Find user by token and check expiration across all models

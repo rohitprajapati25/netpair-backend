@@ -31,10 +31,10 @@ export const getSystemHealth = async (req: Request, res: Response) => {
 
     // DB ping latency
     let dbLatency = -1;
-    if (dbHealthy) {
+    if (dbHealthy && mongoose.connection.db) {
       const dbStart = Date.now();
       try {
-        const admin = mongoose.connection.db?.admin();
+        const admin = mongoose.connection.db.admin();
         if (admin) {
           await admin.ping();
           dbLatency = Date.now() - dbStart;
