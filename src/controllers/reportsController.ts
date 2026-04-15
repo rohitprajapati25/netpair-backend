@@ -144,7 +144,7 @@ export const getUnifiedReports = async (req: Request, res: Response) => {
     }
 
     // Add search filter
-    if (search && search.trim()) {
+    if (search && typeof search === 'string' && search.trim()) {
       const searchRegex = { $regex: search.trim(), $options: 'i' };
       if (tab === 'attendance') {
         matchQuery.$or = [
@@ -180,7 +180,7 @@ export const getUnifiedReports = async (req: Request, res: Response) => {
     }
 
     // Add department filter
-    if (department && department !== 'All') {
+    if (department && typeof department === 'string' && department !== 'All') {
       if (tab === 'attendance') {
         matchQuery.department = department;
       } else if (tab === 'projects') {
@@ -190,7 +190,7 @@ export const getUnifiedReports = async (req: Request, res: Response) => {
     }
 
     // Add status filter
-    if (status && status !== 'All') {
+    if (status && typeof status === 'string' && status !== 'All') {
       matchQuery.status = status;
     }
 
@@ -252,9 +252,9 @@ export const getUnifiedReports = async (req: Request, res: Response) => {
     }
 
     // Calculate stats
-    const totalCount = results[0].totalCount[0]?.count || 0;
-    const statsData = results[0].stats[0];
-    const chartData = results[0].chartData || [];
+    const totalCount = (results[0].totalCount as any[])[0]?.count || 0;
+    const statsData = (results[0].stats as any[])[0];
+    const chartData = (results[0].chartData as any[]) || [];
 
     // Build comprehensive stats
     const stats = {
@@ -265,7 +265,7 @@ export const getUnifiedReports = async (req: Request, res: Response) => {
       totalLeaves: tab === 'leaves' ? totalCount : undefined,
       totalTimesheets: tab === 'timesheets' ? totalCount : undefined,
       totalAssets: tab === 'assets' ? totalCount : undefined,
-      ...getTabSpecificStats(populatedData, tab)
+      ...getTabSpecificStats(populatedData, tab as string)
     };
 
     console.log('📈 Results:', {

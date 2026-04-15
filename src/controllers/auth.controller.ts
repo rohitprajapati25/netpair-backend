@@ -163,9 +163,14 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
+    const tokenStr = req.params.token;
+    if (!tokenStr) {
+      return res.status(400).json({ success: false, message: "Token is required" });
+    }
+
     const resetPasswordToken = crypto
       .createHash('sha256')
-      .update(req.params.token)
+      .update(tokenStr)
       .digest('hex');
 
     // Find user by token and check expiration across all models

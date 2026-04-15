@@ -25,7 +25,8 @@ export const getSystemHealth = async (req: Request, res: Response) => {
 
     // ── 1. Database health ──────────────────────────────────────────────────
     const dbState = mongoose.connection.readyState;
-    const dbStatus = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' }[dbState] || 'unknown';
+    const dbStatusMap: Record<number, string> = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+    const dbStatus = dbStatusMap[dbState] || 'unknown';
     const dbHealthy = dbState === 1;
 
     // DB ping latency
@@ -33,8 +34,11 @@ export const getSystemHealth = async (req: Request, res: Response) => {
     if (dbHealthy) {
       const dbStart = Date.now();
       try {
-        await mongoose.connection.db?.admin().ping();
-        dbLatency = Date.now() - dbStart;
+        const admin = mongoose.connection.db?.admin();
+        if (admin) {
+          await admin.ping();
+          dbLatency = Date.now() - dbStart;
+        }
       } catch { dbLatency = -1; }
     }
 

@@ -61,7 +61,7 @@ export const getAssets = async (req: Request, res: Response) => {
 
 export const createAsset = async (req: Request, res: Response) => {
   try {
-const { name, category, serialNumber, purchaseDate, assignedTo, status, location, notes } = req.body;
+    const { name, category, serialNumber, purchaseDate, assignedTo, status, location, notes } = req.body;
     const user = (req as any).user;
 
     const schema = Joi.object({
@@ -87,20 +87,20 @@ const { name, category, serialNumber, purchaseDate, assignedTo, status, location
 
     const assetData: Partial<IAsset> = {
       assetId,
-      name: name.trim(),
+      name: (name as string).trim(),
       category,
-      serialNumber: serialNumber?.trim() || undefined,
-      purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
-      assignedTo: assignedTo?.trim() ? new mongoose.Types.ObjectId(assignedTo.trim()) : undefined,
-      status: status as any || 'Available',
-      location: location?.trim() || undefined,
-      notes: notes?.trim() || undefined,
-      createdBy: new mongoose.Types.ObjectId(user.id)
+      serialNumber: (serialNumber as string)?.trim() || undefined,
+      purchaseDate: purchaseDate ? new Date(purchaseDate as string) : undefined,
+      assignedTo: (assignedTo as string)?.trim() ? new mongoose.Types.ObjectId((assignedTo as string).trim()) : undefined,
+      status: (status as any) || 'Available',
+      location: (location as string)?.trim() || undefined,
+      notes: (notes as string)?.trim() || undefined,
+      createdBy: new mongoose.Types.ObjectId(user.id as string)
     };
 
     // Validate assignedTo if provided
-    if (assignedTo?.trim()) {
-      const employee = await Employee.findById(assignedTo.trim());
+    if ((assignedTo as string)?.trim()) {
+      const employee = await Employee.findById((assignedTo as string).trim());
       if (!employee) {
         return res.status(400).json({ success: false, message: 'Employee not found' });
       }
@@ -130,15 +130,15 @@ const { name, category, serialNumber, purchaseDate, assignedTo, status, location
 export const updateAsset = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id as string)) {
       return res.status(400).json({ success: false, message: 'Invalid asset ID' });
     }
     const updates = req.body;
     const user = (req as any).user;
 
     // Validate assignedTo if changing
-    if (updates.assignedTo?.trim()) {
-      const employee = await Employee.findById(updates.assignedTo.trim());
+    if ((updates.assignedTo as string)?.trim()) {
+      const employee = await Employee.findById((updates.assignedTo as string).trim());
       if (!employee) return res.status(400).json({ success: false, message: 'Employee not found' });
     }
 
@@ -146,7 +146,7 @@ export const updateAsset = async (req: Request, res: Response) => {
       { _id: id, deletedAt: null },
       {
         ...updates,
-        updatedBy: new mongoose.Types.ObjectId(user.id)
+        updatedBy: new mongoose.Types.ObjectId(user.id as string)
       },
       { new: true, runValidators: true }
     ).populate('assignedTo createdBy updatedBy', 'name designation department');
@@ -168,7 +168,7 @@ export const updateAsset = async (req: Request, res: Response) => {
 export const deleteAsset = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id as string)) {
       return res.status(400).json({ success: false, message: 'Invalid asset ID' });
     }
     await Asset.findByIdAndUpdate(id, { deletedAt: new Date() });

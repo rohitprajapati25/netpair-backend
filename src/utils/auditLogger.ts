@@ -14,9 +14,11 @@ export interface AuditPayload {
 const getClientIP = (req: Request): string => {
   const forwarded = req.headers["x-forwarded-for"];
   if (forwarded) {
-    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(",")[0];
-    const clean = first.trim().replace(/^::ffff:/, "");
-    if (clean) return clean;
+    const first = Array.isArray(forwarded) ? forwarded[0] : (forwarded as string).split(",")[0];
+    if (first) {
+      const clean = first.trim().replace(/^::ffff:/, "");
+      if (clean) return clean;
+    }
   }
   const ip = req.ip || req.socket?.remoteAddress || "";
   if (ip.startsWith("::ffff:")) return ip.replace("::ffff:", "");
