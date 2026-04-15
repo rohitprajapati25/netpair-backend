@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from "express";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 
 export const authorizeRoles = (...roles: ROLES[]) => {
   return (req: any, res: Response, next: NextFunction) => {

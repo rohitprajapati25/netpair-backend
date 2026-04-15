@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev":         "tsx src/server.ts",
+    "dev":         "tsx src/server-fixed.ts",
     "dev:cluster": "tsx src/cluster.ts",
     "start": "node dist/cluster.js",
     "build": "tsc",

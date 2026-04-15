@@ -5,7 +5,7 @@ import Admin from "../model/Admin.js";
 import HR from "../model/HR.js";
 import User from "../model/User.js";
 import Employee from "../model/Employee.js";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 
 // ================================
 // ADMIN + USER DUAL CREATE (Copy Pattern)

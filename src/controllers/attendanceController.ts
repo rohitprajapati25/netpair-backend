@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Attendance, { IAttendance } from "../model/Attendance.js";
 import Employee from "../model/Employee.js";
 import User from "../model/User.js";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 import { auditLog } from "../utils/auditLogger.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

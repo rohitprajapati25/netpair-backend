@@ -50,6 +50,6 @@ if (cluster.isPrimary) {
 
 } else {
   // Worker process — start the actual Express server
-  import("./server.js");
+  import("./server-fixed.js");
   console.log(`  🚀 Worker ${cluster.worker?.id} (PID ${process.pid}) listening`);
 }

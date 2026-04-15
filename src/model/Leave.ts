@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { ROLES } from '../../constants/roles.js';
+import { ROLES } from '../constants/roles.js';
 
 export interface ILeave extends Document {
   employeeId: mongoose.Types.ObjectId;  // Reference to Employee

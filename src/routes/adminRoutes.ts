@@ -3,7 +3,7 @@ import { createEmployee, getEmployees, updateEmployee, deleteEmployee, getActive
 import { getAttendanceRecords, markAttendance, updateAttendance, deleteAttendance, getTodayAttendanceStats } from "../controllers/attendanceController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 import { getLeaves, updateLeaveStatus } from "../controllers/leaveController.js";
 import Project from "../model/Project.js";
 import {

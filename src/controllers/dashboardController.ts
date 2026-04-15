@@ -7,7 +7,7 @@ import Leave from '../model/Leave.js';
 import Project from '../model/Project.js';
 import Asset from '../model/Asset.js';
 import AuditLog from '../model/AuditLog.js';
-import { ROLES } from '../../constants/roles.js';
+import { ROLES } from '../constants/roles.js';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Leave, { ILeave } from "../model/Leave.js";
 import Employee from "../model/Employee.js";
 import Admin from "../model/Admin.js";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 import { auditLog } from "../utils/auditLogger.js";
 
 // ================================

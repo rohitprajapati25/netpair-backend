@@ -1,6 +1,6 @@
 // import type { Request, Response } from "express";
 // import Employee from "../model/Employee.js";
-// import { ROLES } from "../../constants/roles.js";
+// import { ROLES } from "../constants/roles.js";
 
 // export const createEmployee = async (req: Request, res: Response) => {
 //   try {
@@ -175,7 +175,7 @@ import Attendance from "../model/Attendance.js";
 import HR from "../model/HR.js";
 import Admin from "../model/Admin.js";
 import User from "../model/User.js";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 import { auditLog } from "../utils/auditLogger.js";
 
 

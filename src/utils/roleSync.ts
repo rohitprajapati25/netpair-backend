@@ -3,7 +3,7 @@ import Employee from '../model/Employee.js';
 import HR from '../model/HR.js';
 import Admin from '../model/Admin.js';
 import User from '../model/User.js';
-import { ROLES } from '../../constants/roles.js';
+import { ROLES } from '../constants/roles.js';
 
 type RoleType = 'employee' | 'hr' | 'admin';
 type RoleModels = {

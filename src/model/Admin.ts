@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, model } from 'mongoose';
-import { ROLES } from '../../constants/roles.js';
+import { ROLES } from '../constants/roles.js';
 
 export interface IAdmin extends Document {
   name: string;

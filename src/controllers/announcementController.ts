@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import Announcement from "../model/Announcement.js";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 
 // ── GET — fetch announcements for current user's role ─────────────────────────
 export const getAnnouncements = async (req: Request, res: Response) => {

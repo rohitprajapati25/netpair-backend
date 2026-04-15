@@ -1,5 +1,5 @@
 // import mongoose, { Document } from "mongoose";
-// import { ROLES } from "../../constants/roles.js";
+// import { ROLES } from "../constants/roles.js";
 
 // export interface IEmployee extends Document {
 //   name: string;
@@ -43,7 +43,7 @@
 
 
 import mongoose, { Document, Schema } from "mongoose";
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 
 // ✅ TypeScript Interface matching form and schema
 export interface IEmployee extends Document {

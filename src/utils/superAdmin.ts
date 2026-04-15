@@ -1,4 +1,4 @@
-import { ROLES } from "../../constants/roles.js";
+import { ROLES } from "../constants/roles.js";
 import User from "../model/User.js";
 import bcrypt from "bcrypt";
 
