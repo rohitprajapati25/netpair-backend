@@ -95,7 +95,7 @@ export const createAsset = async (req: Request, res: Response) => {
       status: (status as any) || 'Available',
       location: (location as string)?.trim() || undefined,
       notes: (notes as string)?.trim() || undefined,
-      createdBy: new mongoose.Types.ObjectId(user.id as string)
+      createdBy: new mongoose.Types.ObjectId(user?.id ? String(user.id) : undefined)
     };
 
     // Validate assignedTo if provided

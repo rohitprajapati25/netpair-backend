@@ -70,8 +70,10 @@ export const getSystemHealth = async (req: Request, res: Response) => {
       setTimeout(() => {
         const end = os.cpus().map(c => ({ idle: c.times.idle, total: Object.values(c.times).reduce((a, b) => a + b, 0) }));
         const usage = start.map((s, i) => {
-          const idleDiff  = end[i].idle  - s.idle;
-          const totalDiff = end[i].total - s.total;
+          const currentCpu = end[i];
+          if (!currentCpu) return 0;
+          const idleDiff  = currentCpu.idle  - s.idle;
+          const totalDiff = currentCpu.total - s.total;
           return totalDiff === 0 ? 0 : Math.round((1 - idleDiff / totalDiff) * 100);
         });
         resolve(Math.round(usage.reduce((a, b) => a + b, 0) / usage.length));
