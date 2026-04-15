@@ -1,21 +1,36 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import cluster from 'cluster';
 import { app, server } from './app.js';
 import connectDb from './db/db.js';
 import { superAdmin } from "./utils/superAdmin.js";
 
+const PORT = parseInt(process.env.PORT || "5000");
+const WORKER_ID = cluster.worker?.id ?? "standalone";
+
 connectDb()
   .then(() => {
-    superAdmin();
+    // Only seed superAdmin from worker 1 (or standalone) to avoid duplicate seeding
+    if (WORKER_ID === 1 || WORKER_ID === "standalone") {
+      superAdmin();
+    }
 
-    server.listen(5000, () => {
-      console.log("🚀 Server + WebSocket running on http://localhost:5000");
-      console.log("⚡ Real-time employee updates enabled!");
+    server.listen(PORT, () => {
+      console.log(`🚀 Worker [${WORKER_ID}] running on http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("Failed to start server due to DB error", err);
+    console.error(`❌ Worker [${WORKER_ID}] failed to start:`, err);
     process.exit(1);
   });
+
+// Graceful shutdown for this worker
+process.on("SIGTERM", () => {
+  console.log(`🛑 Worker [${WORKER_ID}] shutting down gracefully...`);
+  server.close(() => {
+    console.log(`✅ Worker [${WORKER_ID}] closed all connections`);
+    process.exit(0);
+  });
+});
 

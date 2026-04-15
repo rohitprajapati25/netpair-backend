@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Task, { TASK_STATUS, TASK_PRIORITY, ITask } from '../model/Task.js';
 import Project from '../model/Project.js';
 import Employee from '../model/Employee.js';
+import { auditLog } from '../utils/auditLogger.js';
 
 export const createTask = async (req: Request, res: Response) => {
   try {
@@ -36,6 +37,16 @@ export const createTask = async (req: Request, res: Response) => {
     await task.populate([{ path: 'project_id', select: 'name status' }, { path: 'assigned_to', select: 'name' }]);
     
     res.status(201).json(task);
+
+    // ── Audit log ────────────────────────────────────────────────────────────
+    await auditLog(req, {
+      action:   "TASK_CREATE",
+      resource: "Task Management",
+      details:  `Task "${task_title}" created and assigned to ${employee.name} in project "${project.name}"`,
+      severity: priority === "Critical" || priority === "High" ? "HIGH" : "INFO",
+      status:   "SUCCESS",
+      meta:     { taskId: task._id, projectId: project_id, assignedTo: assigned_to, priority },
+    });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import connectDb from '../src/db/db.js';
-import Attendance from './src/model/Attendance.js';
-import Employee from './src/model/Employee.js';
+import Attendance from './model/Attendance.js';
+import Employee from './model/Employee.js';
 
 const seedAttendance = async () => {
   await connectDb();

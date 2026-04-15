@@ -4,6 +4,7 @@ import Timesheet, { TIMESHEET_STATUS, ITimesheet } from '../model/Timesheet.js';
 import Project from '../model/Project.js';
 import Employee from '../model/Employee.js';
 import Task from '../model/Task.js';
+import { auditLog } from '../utils/auditLogger.js';
 
 export const submitTimesheet = async (req: Request, res: Response) => {
   try {
@@ -26,6 +27,16 @@ export const submitTimesheet = async (req: Request, res: Response) => {
     await timesheet.populate([{ path: 'project_id', select: 'name projectCode' }, { path: 'task_id', select: 'task_title' }, { path: 'employee_id', select: 'name' }]);
 
     res.status(201).json(timesheet);
+
+    // ── Audit log ────────────────────────────────────────────────────────────
+    await auditLog(req, {
+      action:   "TIMESHEET_SUBMIT",
+      resource: "Timesheet System",
+      details:  `Timesheet submitted — ${hours_worked}h on ${date} for project "${project.name}"`,
+      severity: "INFO",
+      status:   "SUCCESS",
+      meta:     { timesheetId: timesheet._id, projectId: project_id, hours: hours_worked },
+    });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }
@@ -82,6 +93,16 @@ export const approveTimesheet = async (req: Request, res: Response) => {
     await timesheet.populate('project_id task_id employee_id approved_by');
 
     res.json({ success: true, timesheet });
+
+    // ── Audit log ────────────────────────────────────────────────────────────
+    await auditLog(req, {
+      action:   status === TIMESHEET_STATUS.APPROVED ? "TIMESHEET_APPROVED" : "TIMESHEET_REJECTED",
+      resource: "Timesheet System",
+      details:  `Timesheet ${status.toLowerCase()} (ID: ${id})${rejection_reason ? ` — Reason: ${rejection_reason}` : ""}`,
+      severity: status === TIMESHEET_STATUS.REJECTED ? "WARNING" : "INFO",
+      status:   "SUCCESS",
+      meta:     { timesheetId: id, timesheetStatus: status },
+    });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
   }

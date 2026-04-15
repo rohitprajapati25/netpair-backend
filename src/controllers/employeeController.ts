@@ -176,6 +176,7 @@ import HR from "../model/HR.js";
 import Admin from "../model/Admin.js";
 import User from "../model/User.js";
 import { ROLES } from "../../constants/roles.js";
+import { auditLog } from "../utils/auditLogger.js";
 
 
 export const createEmployee = async (req: Request, res: Response) => {
@@ -305,6 +306,16 @@ export const createEmployee = async (req: Request, res: Response) => {
       userId: userDoc._id,
     });
 
+    // ── Audit log ────────────────────────────────────────────────────────────
+    await auditLog(req, {
+      action:   "EMPLOYEE_CREATE",
+      resource: "Employee Management",
+      details:  `New ${role} "${name}" (${email}) created in ${department || "N/A"} department`,
+      severity: "INFO",
+      status:   "SUCCESS",
+      meta:     { employeeId: roleSpecificDoc._id, role, department },
+    });
+
   } catch (error: any) {
     console.error('CREATE_USER_ERROR:', error);
     
@@ -421,17 +432,14 @@ export const getEmployeeById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const employee = await Employee.findOne({
-      _id: id,
-      createdBy: (req as any).user.id,
-    })
+    const employee = await Employee.findById(id)
       .populate("createdBy", "name")
-      .select("-password"); // ✅ Never return password
+      .select("-password");
 
     if (!employee) {
       return res.status(404).json({
         success: false,
-        message: "Employee not found or unauthorized",
+        message: "Employee not found",
       });
     }
 
@@ -459,11 +467,11 @@ export const updateEmployee = async (req: Request, res: Response) => {
     }
 
     // Get employee data for sync (role + email)
-    const employee = await Employee.findOne({ _id: id, createdBy: (req as any).user.id }).select('role email');
+    const employee = await Employee.findById(id).select('role email status');
     if (!employee) {
       return res.status(404).json({
         success: false,
-        message: "Employee not found or unauthorized",
+        message: "Employee not found",
       });
     }
 
@@ -498,6 +506,16 @@ export const updateEmployee = async (req: Request, res: Response) => {
       message: "Employee updated & synced successfully",
       employee: populatedEmployee,
     });
+
+    // ── Audit log ────────────────────────────────────────────────────────────
+    await auditLog(req, {
+      action:   "EMPLOYEE_UPDATE",
+      resource: "Employee Management",
+      details:  `Employee record updated (ID: ${id})`,
+      severity: "INFO",
+      status:   "SUCCESS",
+      meta:     { employeeId: id, changes: Object.keys(updateData) },
+    });
   } catch (error: any) {
     // Handle validation errors
     if (error.name === "ValidationError") {
@@ -524,12 +542,12 @@ export const deleteEmployee = async (req: Request, res: Response) => {
 
     console.log('Delete request for ID:', id, 'User:', (req as any).user?.id);
 
-    // 1. Get employee for sync
-    const employee = await Employee.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    // 1. Get employee for sync — no createdBy restriction so any admin/superadmin can delete
+    const employee = await Employee.findById(id).select('email name');
     if (!employee) {
       return res.status(404).json({
         success: false,
-        message: "Employee not found or unauthorized",
+        message: "Employee not found",
       });
     }
 
@@ -548,6 +566,16 @@ export const deleteEmployee = async (req: Request, res: Response) => {
       message: "Employee & User PERMANENTLY deleted",
       deletedEmployee: !!deletedEmp,
       deletedUser: !!deletedUser
+    });
+
+    // ── Audit log ────────────────────────────────────────────────────────────
+    await auditLog(req, {
+      action:   "EMPLOYEE_DELETE",
+      resource: "Employee Management",
+      details:  `Employee "${employee.email}" permanently deleted`,
+      severity: "HIGH",
+      status:   "SUCCESS",
+      meta:     { employeeId: id, email: employee.email },
     });
   } catch (error: any) {
     console.error('DELETE_ERROR:', error);

@@ -19,5 +19,12 @@ import { getTimesheets, approveTimesheet } from "../controllers/timesheetControl
 router.get("/timesheets", protect, authorizeRoles(ROLES.HR), getTimesheets);
 router.put("/timesheets/:id", protect, authorizeRoles(ROLES.HR), approveTimesheet);
 
+// ===== HR PROFILE & SETTINGS =====
+import { updateProfile, changePassword, getProfile } from "../controllers/settingsController.js";
+
+router.get("/profile", protect, authorizeRoles(ROLES.HR), getProfile);
+router.put("/profile", protect, authorizeRoles(ROLES.HR), updateProfile);
+router.post("/password", protect, authorizeRoles(ROLES.HR), changePassword);
+
 export default router;
 
