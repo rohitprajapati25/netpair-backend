@@ -14,6 +14,8 @@ export interface IAdmin extends Document {
   status: string;
   isFirstLogin: boolean;
   createdBy: mongoose.Types.ObjectId;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 const adminSchema = new Schema<IAdmin>({
@@ -50,6 +52,8 @@ const adminSchema = new Schema<IAdmin>({
     default: ROLES.INACTIVE
   },
   isFirstLogin: { type: Boolean, default: true },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   createdBy: { 
     type: Schema.Types.ObjectId, 
     ref: 'User', 

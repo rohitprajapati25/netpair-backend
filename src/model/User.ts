@@ -17,6 +17,8 @@ export interface IUser extends Document {
   isFirstLogin: boolean;
   createdBy?: mongoose.Types.ObjectId;
   deletedAt?: Date; // ✅ Soft delete
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -43,6 +45,8 @@ const userSchema = new mongoose.Schema<IUser>(
       default: ROLES.INACTIVE,
     },
     isFirstLogin: { type: Boolean, default: true },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

@@ -26,7 +26,7 @@ import {
   createTask, getTasks, updateTask, deleteTask, getTaskStats, updateTaskProgress, addTaskComment
 } from "../controllers/taskController.js";
 import { getTimesheets, approveTimesheet, deleteTimesheet } from "../controllers/timesheetController.js";
-import { getUnifiedReports as getUnifiedReportsFixed } from '../controllers/reportsController-fixed.js';
+import { getUnifiedReports } from '../controllers/reportsController.js';
 import { getDashboardStats, getDashboardActivity, getDashboardAttendanceTrend } from "../controllers/dashboardController.js";
 import { getSystemHealth } from "../controllers/healthController.js";
 import { getAnnouncements, createAnnouncement, deleteAnnouncement } from "../controllers/announcementController.js";
@@ -126,7 +126,7 @@ router.put("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.A
 router.delete("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), deleteTimesheet);
 
 // ===== REPORTS =====
-router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getUnifiedReportsFixed);
+router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getUnifiedReports);
 
 // ===== ANNOUNCEMENTS =====
 router.get("/announcements",        protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getAnnouncements);

@@ -16,6 +16,8 @@ export interface IHR extends Document {
   status: string;
   isFirstLogin: boolean;
   createdBy: mongoose.Types.ObjectId;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 const hrSchema = new Schema<IHR>({
@@ -64,6 +66,8 @@ const hrSchema = new Schema<IHR>({
     default: ROLES.INACTIVE
   },
   isFirstLogin: { type: Boolean, default: true },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   createdBy: { 
     type: Schema.Types.ObjectId, 
     ref: 'User', 

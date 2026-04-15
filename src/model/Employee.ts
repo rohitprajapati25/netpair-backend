@@ -64,6 +64,8 @@ export interface IEmployee extends Document {
   deletedAt?: Date; // ✅ Soft delete support
   createdAt?: Date;
   updatedAt?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 // ✅ MongoDB Schema definition
@@ -139,6 +141,8 @@ const employeeSchema = new Schema<IEmployee>(
       type: Boolean,
       default: true,
     },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
 
     // Status & Metadata
     status: {
