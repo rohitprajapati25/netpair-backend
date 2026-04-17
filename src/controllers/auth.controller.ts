@@ -57,7 +57,7 @@ export const loginUser = async (req: Request, res: Response) => {
       );
       return res.status(403).json({ 
         success: false, 
-        message: `Account status '${normalizedStatus}' - Contact admin for activation.` 
+        message: `Your account is ${normalizedStatus}. Please contact admin to activate your account.`
       });
     }
 

@@ -13,18 +13,19 @@ router.put("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES
 router.delete("/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteEmployee);
 router.post("/login", loginEmployee);
 
-// ===== EMPLOYEE LEAVE APPLY =====
-import { createLeave, getLeaves, cancelLeave } from "../controllers/leaveController.js";
-router.post("/leaves", protect, authorizeRoles(ROLES.EMPLOYEE, ROLES.HR), createLeave);
-router.get("/leaves", protect, authorizeRoles(ROLES.EMPLOYEE), getLeaves); // My own leaves
-router.delete("/leaves/:id", protect, authorizeRoles(ROLES.EMPLOYEE), cancelLeave);
+// ===== EMPLOYEE LEAVE =====
+import { createLeave, getMyLeaves, cancelLeave } from "../controllers/leaveController.js";
+router.post("/leaves",        protect, authorizeRoles(ROLES.EMPLOYEE, ROLES.HR), createLeave);
+router.get("/leaves",         protect, authorizeRoles(ROLES.EMPLOYEE),           getMyLeaves);
+router.delete("/leaves/:id",  protect, authorizeRoles(ROLES.EMPLOYEE),           cancelLeave);
 
 // ===== EMPLOYEE ATTENDANCE =====
 import { getAttendanceRecords, checkIn, checkOut, getTodayStatus } from "../controllers/attendanceController.js";
-router.get("/attendance",        protect, authorizeRoles(ROLES.EMPLOYEE), getAttendanceRecords);
-router.get("/attendance/today",  protect, authorizeRoles(ROLES.EMPLOYEE), getTodayStatus);
+// IMPORTANT: static routes MUST come before parameterized routes
+router.get("/attendance/today",     protect, authorizeRoles(ROLES.EMPLOYEE), getTodayStatus);
 router.post("/attendance/checkin",  protect, authorizeRoles(ROLES.EMPLOYEE), checkIn);
 router.post("/attendance/checkout", protect, authorizeRoles(ROLES.EMPLOYEE), checkOut);
+router.get("/attendance",           protect, authorizeRoles(ROLES.EMPLOYEE), getAttendanceRecords);
 
 // ===== TASK & TIMESHEET - Employee =====
 import { getTasks, updateTask, deleteTask, updateTaskProgress, addTaskComment } from "../controllers/taskController.js";
@@ -45,5 +46,21 @@ import { updateProfile, changePassword, getProfile } from "../controllers/settin
 router.get("/profile", protect, authorizeRoles(ROLES.EMPLOYEE), getProfile);
 router.put("/profile", protect, authorizeRoles(ROLES.EMPLOYEE), updateProfile);
 router.post("/password", protect, authorizeRoles(ROLES.EMPLOYEE), changePassword);
+
+// ===== EMPLOYEE READ-ONLY: Projects assigned to this employee =====
+import { getProjects } from "../controllers/projectController.js";
+router.get("/projects", protect, authorizeRoles(ROLES.EMPLOYEE), async (req: any, res: any) => {
+  // Inject employee filter so getProjects returns only assigned projects
+  req.query._employeeFilter = req.user.id;
+  return getProjects(req, res);
+});
+
+// ===== EMPLOYEE READ-ONLY: Announcements targeted at employee/all =====
+import { getAnnouncements } from "../controllers/announcementController.js";
+router.get("/announcements", protect, authorizeRoles(ROLES.EMPLOYEE), getAnnouncements);
+
+// ===== EMPLOYEE READ-ONLY: Holidays =====
+import { getHolidays } from "../controllers/holidayController.js";
+router.get("/holidays", protect, authorizeRoles(ROLES.EMPLOYEE), getHolidays);
 
 export default router;

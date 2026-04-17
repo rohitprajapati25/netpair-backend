@@ -42,7 +42,7 @@ export const loginUser = async (req, res) => {
             await auditLoginLog(req, { id: user._id.toString(), name: user.name, role: user.role || "unknown", email }, false, `Login blocked — account status: ${normalizedStatus}`);
             return res.status(403).json({
                 success: false,
-                message: `Account status '${normalizedStatus}' - Contact admin for activation.`
+                message: `Your account is ${normalizedStatus}. Please contact admin to activate your account.`
             });
         }
         const tokenRole = user.role || 'employee';

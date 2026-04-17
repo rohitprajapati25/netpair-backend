@@ -91,23 +91,39 @@ export const createAdmin = async (req: Request, res: Response) => {
 // ADMIN CRUD Operations
 export const getAdmins = async (req: Request, res: Response) => {
   try {
-    const { search, page = 1, limit = 10 } = req.query;
-    const query: any = { createdBy: (req as any).user.id };
+    const { search, page = 1, limit = 10, status } = req.query;
+    const query: any = {};  // No createdBy filter — superadmin sees all
 
     if (search) {
-      query.$or = [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }];
+      query.$or = [
+        { name:  { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
     }
+    if (status && status !== 'all') query.status = status;
 
-    const admins = await Admin.find(query)
-      .populate('createdBy', 'name')
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit));
+    const [admins, total] = await Promise.all([
+      Admin.find(query)
+        .populate('createdBy', 'name')
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .limit(Number(limit))
+        .skip((Number(page) - 1) * Number(limit)),
+      Admin.countDocuments(query),
+    ]);
 
-    const total = await Admin.countDocuments(query);
-
-    res.json({ success: true, admins, total, page: Number(page), limit: Number(limit) });
+    res.json({
+      success: true,
+      admins,
+      employees: admins,  // alias
+      total,
+      pagination: {
+        page:  Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -118,23 +134,22 @@ export const updateAdmin = async (req: Request, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const admin = await Admin.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    const admin = await Admin.findById(id).select('email status');
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
 
-    // Update Admin
     await Admin.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
 
-    // Sync User
-    await User.findOneAndUpdate({ email: admin.email }, { 
-      $set: { 
+    // Sync User collection
+    await User.findOneAndUpdate({ email: admin.email }, {
+      $set: {
         ...('designation' in updateData && { designation: updateData.designation }),
-        ...('department' in updateData && { department: updateData.department }),
-        status: updateData.status || admin.status 
+        ...('department'  in updateData && { department:  updateData.department  }),
+        ...('status'      in updateData && { status:      updateData.status      }),
       }
     });
 
     const updatedAdmin = await Admin.findById(id).populate('createdBy', 'name').select('-password');
-    res.json({ success: true, admin: updatedAdmin });
+    res.json({ success: true, admin: updatedAdmin, employee: updatedAdmin });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -143,10 +158,9 @@ export const updateAdmin = async (req: Request, res: Response) => {
 export const deleteAdmin = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const admin = await Admin.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    const admin = await Admin.findById(id).select('email name');
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
 
-    // Hard delete both
     await Admin.findByIdAndDelete(id);
     await User.findOneAndDelete({ email: admin.email });
 

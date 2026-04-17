@@ -1,80 +1,74 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { ROLES } from '../constants/roles.js';
+
+export const LEAVE_TYPES = ['Casual', 'Sick', 'Emergency', 'Maternity', 'Paternity', 'Personal', 'Earned'] as const;
+export type LeaveType = typeof LEAVE_TYPES[number];
 
 export interface ILeave extends Document {
-  employeeId: mongoose.Types.ObjectId;  // Reference to Employee
-  type: 'Casual' | 'Sick' | 'Emergency' | 'Maternity' | 'Paternity' | 'Personal';
+  employeeId: mongoose.Types.ObjectId;  // Reference to User (unified model)
+  type: LeaveType;
   fromDate: Date;
   toDate: Date;
   days: number;
   reason?: string;
+  rejectionReason?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
-  approvedBy?: mongoose.Types.ObjectId;  // Admin/SuperAdmin who approved/rejected
+  approvedBy?: mongoose.Types.ObjectId;  // User who approved/rejected (any role)
   approvedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const LeaveSchema: Schema = new Schema<ILeave>({
-  employeeId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Employee',
-    required: [true, 'Employee ID is required'],
-    index: true
+const LeaveSchema: Schema = new Schema<ILeave>(
+  {
+    employeeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',                          // ← unified User model
+      required: [true, 'Employee ID is required'],
+      index: true,
+    },
+    type: {
+      type: String,
+      enum: LEAVE_TYPES,
+      required: [true, 'Leave type is required'],
+    },
+    fromDate: {
+      type: Date,
+      required: [true, 'From date is required'],
+    },
+    toDate: {
+      type: Date,
+      required: [true, 'To date is required'],
+    },
+    days: {
+      type: Number,
+      min: [1, 'Minimum 1 day leave'],
+    },
+    reason: {
+      type: String,
+      maxlength: [500, 'Reason max 500 characters'],
+    },
+    rejectionReason: {
+      type: String,
+      maxlength: [500, 'Rejection reason max 500 characters'],
+    },
+    status: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected'],
+      default: 'Pending',
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',                          // ← any role can approve (Admin/HR/SuperAdmin)
+    },
+    approvedAt: Date,
   },
-  type: {
-    type: String,
-    enum: ['Casual', 'Sick', 'Emergency', 'Maternity', 'Paternity', 'Personal'],
-    required: [true, 'Leave type is required']
-  },
-  fromDate: {
-    type: Date,
-    required: [true, 'From date is required']
-  },
-  toDate: {
-    type: Date,
-    required: [true, 'To date is required']
-  },
-  days: {
-    type: Number,
-    required: [true, 'Number of days is required'],
-    min: [1, 'Minimum 1 day leave']
-  },
-  reason: {
-    type: String,
-    maxlength: [500, 'Reason max 500 characters']
-  },
-  status: {
-    type: String,
-    enum: ['Pending', 'Approved', 'Rejected'],
-    default: 'Pending'
-  },
-  approvedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin'
-  },
-  approvedAt: {
-    type: Date
-  }
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
-// Index for efficient queries
+// Compound indexes for common query patterns
 LeaveSchema.index({ employeeId: 1, status: 1 });
 LeaveSchema.index({ status: 1, fromDate: -1 });
-LeaveSchema.index({ approvedBy: 1 });
-
-// Calculate days automatically (pre-save)
-LeaveSchema.pre('save', function(next) {
-  if ((this as any).fromDate && (this as any).toDate) {
-    const diffTime = (this as any).toDate.getTime() - (this as any).fromDate.getTime();
-    (this as any).days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;  // Inclusive days
-  }
-  (next as any)();
-});
+LeaveSchema.index({ createdAt: -1 });
 
 export const Leave: Model<ILeave> = mongoose.model<ILeave>('Leave', LeaveSchema);
-
 export default Leave;
-

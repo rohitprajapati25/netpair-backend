@@ -91,23 +91,39 @@ export const createHR = async (req: Request, res: Response) => {
 // HR CRUD (get, update, delete)
 export const getHRs = async (req: Request, res: Response) => {
   try {
-    const { search, page = 1, limit = 10 } = req.query;
-    const query: any = { createdBy: (req as any).user.id };
+    const { search, page = 1, limit = 10, status } = req.query;
+    const query: any = {};
 
     if (search) {
-      query.$or = [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }];
+      query.$or = [
+        { name:  { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
     }
+    if (status && status !== 'all') query.status = status;
 
-    const hrs = await HR.find(query)
-      .populate('createdBy', 'name')
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit));
+    const [hrs, total] = await Promise.all([
+      HR.find(query)
+        .populate('createdBy', 'name')
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .limit(Number(limit))
+        .skip((Number(page) - 1) * Number(limit)),
+      HR.countDocuments(query),
+    ]);
 
-    const total = await HR.countDocuments(query);
-
-    res.json({ success: true, hrs, total, page: Number(page), limit: Number(limit) });
+    res.json({
+      success: true,
+      hrs,
+      employees: hrs,   // alias — some frontend pages use .employees
+      total,
+      pagination: {
+        page:  Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -118,23 +134,22 @@ export const updateHR = async (req: Request, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const hr = await HR.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    const hr = await HR.findById(id).select('email status');
     if (!hr) return res.status(404).json({ success: false, message: "HR not found" });
 
-    // Update HR
     await HR.findByIdAndUpdate(id, { $set: updateData }, { runValidators: true });
 
-    // Sync User
-    await User.findOneAndUpdate({ email: hr.email }, { 
-      $set: { 
+    // Sync User collection
+    await User.findOneAndUpdate({ email: hr.email }, {
+      $set: {
         ...('designation' in updateData && { designation: updateData.designation }),
-        ...('department' in updateData && { department: updateData.department }),
-        status: updateData.status || hr.status 
+        ...('department'  in updateData && { department:  updateData.department  }),
+        ...('status'      in updateData && { status:      updateData.status      }),
       }
     });
 
     const updatedHR = await HR.findById(id).populate('createdBy', 'name').select('-password');
-    res.json({ success: true, hr: updatedHR });
+    res.json({ success: true, hr: updatedHR, employee: updatedHR });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -143,10 +158,9 @@ export const updateHR = async (req: Request, res: Response) => {
 export const deleteHR = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const hr = await HR.findOne({ _id: id, createdBy: (req as any).user.id }).select('email');
+    const hr = await HR.findById(id).select('email name');
     if (!hr) return res.status(404).json({ success: false, message: "HR not found" });
 
-    // Hard delete both
     await HR.findByIdAndDelete(id);
     await User.findOneAndDelete({ email: hr.email });
 

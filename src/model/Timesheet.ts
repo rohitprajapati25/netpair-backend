@@ -2,81 +2,81 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export enum TIMESHEET_STATUS {
   SUBMITTED = "Submitted",
-  APPROVED = "Approved",
-  REJECTED = "Rejected"
+  APPROVED  = "Approved",
+  REJECTED  = "Rejected",
 }
 
 export interface ITimesheet extends Document {
-  date: Date;
-  project_id: mongoose.Types.ObjectId; // Ref Project
-  task_id: mongoose.Types.ObjectId; // Ref Task (optional if general project work)
-  employee_id: mongoose.Types.ObjectId; // Ref Employee
-  hours_worked: number;
-  work_description: string;
-  status: TIMESHEET_STATUS;
-  approved_by?: mongoose.Types.ObjectId; // Ref Admin/HR
+  date:              Date;
+  project_id:        mongoose.Types.ObjectId;   // Ref Project
+  task_id?:          mongoose.Types.ObjectId;   // Ref Task (optional)
+  employee_id:       mongoose.Types.ObjectId;   // Ref User (unified)
+  hours_worked:      number;
+  work_description:  string;
+  status:            TIMESHEET_STATUS;
+  approved_by?:      mongoose.Types.ObjectId;   // Ref User (Admin/HR)
   rejection_reason?: string;
-  created_at: Date;
-  updated_at: Date;
-  deletedAt?: Date;
+  deletedAt?:        Date;                      // soft-delete
+  createdAt:         Date;
+  updatedAt:         Date;
 }
 
-const timesheetSchema = new Schema<ITimesheet>({
-  date: {
-    type: Date,
-    required: [true, "Date is required"]
+const timesheetSchema = new Schema<ITimesheet>(
+  {
+    date: {
+      type:     Date,
+      required: [true, "Date is required"],
+    },
+    project_id: {
+      type:     mongoose.Schema.Types.ObjectId,
+      ref:      "Project",
+      required: [true, "Project is required"],
+      index:    true,
+    },
+    task_id: {
+      type:  mongoose.Schema.Types.ObjectId,
+      ref:   "Task",
+      index: true,
+    },
+    // ── Ref changed to "User" so unified model works ──────────────────────────
+    employee_id: {
+      type:     mongoose.Schema.Types.ObjectId,
+      ref:      "User",
+      required: [true, "Employee required"],
+    },
+    hours_worked: {
+      type:     Number,
+      required: [true, "Hours worked required"],
+      min:      [0.5, "Minimum 0.5 hours"],
+      max:      [24,  "Max 24 hours per day"],
+    },
+    work_description: {
+      type:      String,
+      required:  [true, "Work description required"],
+      minlength: [10,   "Minimum 10 characters"],
+      maxlength: [2000, "Max 2000 characters"],
+    },
+    status: {
+      type:    String,
+      enum:    Object.values(TIMESHEET_STATUS),
+      default: TIMESHEET_STATUS.SUBMITTED,
+    },
+    approved_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref:  "User",
+    },
+    rejection_reason: {
+      type:      String,
+      maxlength: [500],
+    },
+    deletedAt: { type: Date, default: null },
   },
-  project_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Project",
-    required: [true, "Project is required"],
-    index: true
-  },
-  task_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Task",
-    index: true
-  },
-  employee_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Employee",
-    required: [true, "Employee required"]
-  },
-  hours_worked: {
-    type: Number,
-    required: [true, "Hours worked required"],
-    min: [0, "Hours cannot be negative"],
-    max: [24, "Max 24 hours per day"]
-  },
-  work_description: {
-    type: String,
-    required: [true, "Work description required"],
-    maxlength: [2000, "Work description too long"]
-  },
-  status: {
-    type: String,
-    enum: Object.values(TIMESHEET_STATUS),
-    default: TIMESHEET_STATUS.SUBMITTED
-  },
-  approved_by: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User" // Admin/HR
-  },
-  rejection_reason: {
-    type: String,
-    maxlength: [500]
-  }
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
-timesheetSchema.index({ employee_id: 1, date: 1 });
+timesheetSchema.index({ employee_id: 1, date: -1 });
 timesheetSchema.index({ project_id: 1, status: 1 });
 timesheetSchema.index({ date: -1 });
-
-// (timesheetSchema.query as any).notDeleted = function() {
-  // return this.where({ deletedAt: null });
- // };
+timesheetSchema.index({ deletedAt: 1 });
 
 export default mongoose.model<ITimesheet>("Timesheet", timesheetSchema);
-

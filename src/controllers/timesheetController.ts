@@ -3,52 +3,105 @@ import mongoose from 'mongoose';
 import Timesheet, { TIMESHEET_STATUS, ITimesheet } from '../model/Timesheet.js';
 import Project from '../model/Project.js';
 import Employee from '../model/Employee.js';
+import User from '../model/User.js';
 import Task from '../model/Task.js';
 import { auditLog } from '../utils/auditLogger.js';
+
+/** Resolve Employee._id from User._id (falls back to User._id if no Employee record found) */
+const resolveEmployeeId = async (userId: string): Promise<any> => {
+  const user = await User.findById(userId).select("email");
+  if (user) {
+    const emp = await Employee.findOne({ email: user.email }).select("_id");
+    if (emp) return emp._id;
+  }
+  return userId;
+};
 
 export const submitTimesheet = async (req: Request, res: Response) => {
   try {
     const { date, project_id, task_id, hours_worked, work_description } = req.body;
 
-    const project = await Project.findById(project_id);
-    if (!project) return res.status(404).json({ message: "Project not found" });
+    // Validate required fields
+    if (!date || !project_id || !hours_worked || !work_description) {
+      return res.status(400).json({ success: false, message: "date, project_id, hours_worked and work_description are required" });
+    }
 
-    const timesheet = new Timesheet({
-      date: new Date(date),
+    const hours = Number(hours_worked);
+    if (isNaN(hours) || hours < 0.5 || hours > 24) {
+      return res.status(400).json({ success: false, message: "hours_worked must be between 0.5 and 24" });
+    }
+
+    if (work_description.trim().length < 10) {
+      return res.status(400).json({ success: false, message: "work_description must be at least 10 characters" });
+    }
+
+    const project = await Project.findById(project_id);
+    if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+    // Validate task belongs to this project (if provided)
+    if (task_id && mongoose.Types.ObjectId.isValid(task_id)) {
+      const task = await Task.findOne({ _id: task_id, project_id, deletedAt: null });
+      if (!task) return res.status(404).json({ success: false, message: "Task not found in this project" });
+    }
+
+    const employeeId = await resolveEmployeeId((req as any).user!.id);
+
+    // Prevent duplicate: same employee, same project, same date
+    const logDate = new Date(date);
+    logDate.setHours(0, 0, 0, 0);
+    const nextDay = new Date(logDate); nextDay.setDate(nextDay.getDate() + 1);
+
+    const duplicate = await Timesheet.findOne({
+      employee_id: employeeId,
       project_id,
-      task_id: (task_id && mongoose.Types.ObjectId.isValid(task_id)) ? task_id : null,
-      employee_id: (req as any).user!.employeeId || (req as any).user!.id,
-      hours_worked,
-      work_description,
-      status: TIMESHEET_STATUS.SUBMITTED
+      date: { $gte: logDate, $lt: nextDay },
+      deletedAt: null,
+    });
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        message: `You already logged time for this project on ${logDate.toLocaleDateString("en-GB")}. Edit the existing entry instead.`,
+      });
+    }
+
+    const timesheet = await Timesheet.create({
+      date:             logDate,
+      project_id,
+      task_id:          (task_id && mongoose.Types.ObjectId.isValid(task_id)) ? task_id : undefined,
+      employee_id:      employeeId,
+      hours_worked:     hours,
+      work_description: work_description.trim(),
+      status:           TIMESHEET_STATUS.SUBMITTED,
     });
 
-    await timesheet.save();
-    await timesheet.populate([{ path: 'project_id', select: 'name projectCode' }, { path: 'task_id', select: 'task_title' }, { path: 'employee_id', select: 'name' }]);
+    const populated = await Timesheet.findById(timesheet._id)
+      .populate("project_id",  "name projectCode")
+      .populate("task_id",     "task_title")
+      .populate("employee_id", "name")
+      .lean();
 
-    res.status(201).json(timesheet);
+    res.status(201).json({ success: true, message: "Timesheet submitted successfully", timesheet: populated });
 
-    // ── Audit log ────────────────────────────────────────────────────────────
     await auditLog(req, {
       action:   "TIMESHEET_SUBMIT",
       resource: "Timesheet System",
-      details:  `Timesheet submitted — ${hours_worked}h on ${date} for project "${project.name}"`,
+      details:  `Timesheet submitted — ${hours}h on ${date} for project "${project.name}"`,
       severity: "INFO",
       status:   "SUCCESS",
-      meta:     { timesheetId: timesheet._id, projectId: project_id, hours: hours_worked },
+      meta:     { timesheetId: timesheet._id, projectId: project_id, hours },
     });
   } catch (error: any) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
 export const getTimesheets = async (req: Request, res: Response) => {
   try {
-    const { employee_id, status, date, page = 1, limit = 10 } = req.query;
+    const { employee_id, status, date, page = 1, limit = 200 } = req.query;
     const query: any = { deletedAt: null };
 
     if (employee_id || (req as any).user!.role === 'employee') {
-      query.employee_id = employee_id || (req as any).user!.employeeId || (req as any).user!.id;
+      query.employee_id = employee_id || await resolveEmployeeId((req as any).user!.id);
     }
     if (status) query.status = status;
     if (date) query.date = { $gte: new Date(date as string), $lte: new Date((date as string) + 'T23:59:59') };
@@ -137,19 +190,29 @@ export const getProductivityReport = async (req: Request, res: Response) => {
 export const deleteTimesheet = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const user   = (req as any).user;
     const query: any = { _id: id, deletedAt: null };
 
-    // If employee, can only delete their own submitted (not approved/rejected) timesheets
-    if ((req as any).user!.role === 'employee') {
-      query.employee_id = (req as any).user!.employeeId || (req as any).user!.id;
-      query.status = TIMESHEET_STATUS.SUBMITTED;
+    // Employee can only delete their own SUBMITTED timesheets
+    if (user.role === "employee") {
+      query.employee_id = await resolveEmployeeId(user.id);
+      query.status      = TIMESHEET_STATUS.SUBMITTED;
     }
 
-    const timesheet = await Timesheet.findByIdAndDelete(id);
-    if (!timesheet) return res.status(404).json({ success: false, message: "Timesheet not found or cannot be deleted" });
+    const timesheet = await Timesheet.findOneAndUpdate(
+      query,
+      { deletedAt: new Date() },
+      { new: true }
+    );
+    if (!timesheet) {
+      return res.status(404).json({
+        success: false,
+        message: "Timesheet not found or cannot be deleted (only Submitted timesheets can be deleted)",
+      });
+    }
 
     res.json({ success: true, message: "Timesheet deleted" });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };

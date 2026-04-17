@@ -87,7 +87,8 @@ export const getAttendanceRecords = async (req, res) => {
             .populate('createdBy', 'name')
             .sort({ date: -1 })
             .limit(Number(limit))
-            .skip((Number(page) - 1) * Number(limit));
+            .skip((Number(page) - 1) * Number(limit))
+            .lean();
         const total = await Attendance.countDocuments(query);
         res.json({
             success: true,

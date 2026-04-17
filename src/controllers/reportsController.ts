@@ -135,8 +135,12 @@ export const getUnifiedReports = async (req: Request, res: Response) => {
         ];
     }
 
-    // Build match query
-    const matchQuery: any = { deletedAt: null };
+    // Build match query — only add deletedAt filter for models that support it
+    const modelsWithSoftDelete = ['projects', 'tasks', 'timesheets', 'assets'];
+    const matchQuery: any = {};
+    if (modelsWithSoftDelete.includes(tab as string)) {
+      matchQuery.deletedAt = null;
+    }
 
     // Add date filter
     if (Object.keys(dateFilter).length > 0) {

@@ -4,6 +4,7 @@ import Project from "../model/Project.js";
 import Task from "../model/Task.js";
 import Timesheet from "../model/Timesheet.js";
 import Employee from "../model/Employee.js";
+import { auditLog } from "../utils/auditLogger.js";
 
 const sanitizeObjectId = (value: any): mongoose.Types.ObjectId | undefined => {
   if (!value || value === '' || value === 'null' || value === null || value === undefined) {
@@ -46,6 +47,17 @@ export const getProjects = async (req: Request, res: Response) => {
     
     if (createdBy && createdBy !== 'All') {
       query.createdBy = createdBy;
+    }
+
+    // ── Employee filter: only return projects where this employee is assigned ──
+    const employeeFilter = (req as any).query?._employeeFilter;
+    if (employeeFilter) {
+      // Resolve Employee._id from User._id
+      const user = await Employee.findOne({ _id: employeeFilter }).select("_id").lean()
+        .catch(() => null);
+      const empId = user ? user._id : employeeFilter;
+      query.assignedEmployees = empId;
+      delete (req as any).query._employeeFilter;
     }
     
     console.log('📋 Query filters:', query);

@@ -136,27 +136,50 @@ export const getDashboardActivity = async (req: Request, res: Response) => {
 };
 
 // ── Weekly attendance trend (last 7 days) ────────────────────────────────────
+// Single aggregation instead of 21 separate countDocuments calls
 export const getDashboardAttendanceTrend = async (req: Request, res: Response) => {
   try {
-    const result = [];
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 6);
+    weekAgo.setHours(0, 0, 0, 0);
+
+    // One aggregation groups all 7 days × 3 statuses in a single DB round-trip
+    const raw = await Attendance.aggregate([
+      { $match: { date: { $gte: weekAgo } } },
+      {
+        $group: {
+          _id: {
+            date:   { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+            status: '$status',
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Build a map keyed by date string
+    const map: Record<string, { Present: number; Absent: number; Late: number }> = {};
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const start = new Date(d); start.setHours(0, 0, 0, 0);
-      const end   = new Date(d); end.setHours(23, 59, 59, 999);
-
-      const [present, absent, late] = await Promise.all([
-        Attendance.countDocuments({ date: { $gte: start, $lte: end }, status: 'Present' }),
-        Attendance.countDocuments({ date: { $gte: start, $lte: end }, status: 'Absent'  }),
-        Attendance.countDocuments({ date: { $gte: start, $lte: end }, status: 'Late'    }),
-      ]);
-
-      result.push({
-        day:     d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
-        Present: present,
-        Absent:  absent,
-        Late:    late,
-      });
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      map[key] = { Present: 0, Absent: 0, Late: 0 };
     }
+
+    raw.forEach(({ _id, count }) => {
+      if (map[_id.date] && (_id.status === 'Present' || _id.status === 'Absent' || _id.status === 'Late')) {
+        map[_id.date][_id.status as 'Present' | 'Absent' | 'Late'] = count;
+      }
+    });
+
+    const result = Object.entries(map).map(([dateStr, counts]) => {
+      const d = new Date(dateStr + 'T00:00:00');
+      return {
+        day: d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
+        ...counts,
+      };
+    });
+
     res.json({ success: true, trend: result });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

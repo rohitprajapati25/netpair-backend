@@ -64,18 +64,23 @@ export const getAttendanceRecords = async (req: Request, res: Response) => {
 
     // ── SECURITY: employees can only see their own records ──────────────────
     if (requestingUser.role === ROLES.EMPLOYEE) {
+      // Use User._id directly — Attendance.employee refs Employee model,
+      // but we store the User._id as employee ref when using unified model.
+      // Try both: first by User._id, then by Employee email lookup as fallback.
       const user = await User.findById(requestingUser.id).select("email");
       if (user) {
         const emp = await Employee.findOne({ email: user.email }).select("_id");
-        if (emp) query.employee = emp._id;
-        else return res.json({ success: true, records: [], pagination: { current: 1, pages: 0, total: 0 } });
+        // Use Employee._id if found, otherwise fall back to User._id
+        query.employee = emp ? emp._id : requestingUser.id;
+      } else {
+        query.employee = requestingUser.id;
       }
     }
 
     if (dateFrom || dateTo) {
       query.date = {};
       if (dateFrom) query.date.$gte = new Date(dateFrom as string);
-      if (dateTo) query.date.$lte = new Date(dateTo as string + 'T23:59:59.999Z');
+      if (dateTo)   query.date.$lte = new Date((dateTo as string).includes("T") ? dateTo as string : `${dateTo}T23:59:59.999Z`);
     }
 
     if (search) {
@@ -99,12 +104,12 @@ export const getAttendanceRecords = async (req: Request, res: Response) => {
     }
 
     const records = await Attendance.find(query)
-
       .populate('employee', 'name department designation workMode shiftType locationType')
       .populate('createdBy', 'name')
       .sort({ date: -1 })
       .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit));
+      .skip((Number(page) - 1) * Number(limit))
+      .lean();
 
     const total = await Attendance.countDocuments(query);
 
@@ -413,29 +418,39 @@ export const getTodayAttendanceStats = async (req: Request, res: Response) => {
 // EMPLOYEE SELF CHECK-IN / CHECK-OUT
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Resolve the Employee._id for a given User._id.
+ * Tries Employee collection by email first; falls back to using User._id directly
+ * (for cases where the unified User model is used as the attendance employee ref).
+ */
+const resolveEmployeeId = async (userId: string): Promise<{ employeeId: any; name: string } | null> => {
+  // 1. Try User → email → Employee
+  const user = await User.findById(userId).select("email name");
+  if (user) {
+    const emp = await Employee.findOne({ email: user.email }).select("_id name joiningDate");
+    if (emp) return { employeeId: emp._id, name: emp.name };
+    // 2. Fallback: use User._id directly (unified model)
+    return { employeeId: userId, name: user.name };
+  }
+  return null;
+};
+
 /** GET /api/employees/attendance/today — returns today's record for the logged-in employee */
 export const getTodayStatus = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-
-    // Find the Employee doc that matches this user (by email via User model)
-    const user = await User.findById(userId).select("email");
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    const employee = await Employee.findOne({ email: user.email }).select("_id name joiningDate");
-    if (!employee) {
-      return res.json({ success: true, record: null, employeeId: null });
-    }
+    const resolved = await resolveEmployeeId(userId);
+    if (!resolved) return res.status(404).json({ success: false, message: "User not found" });
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const record = await Attendance.findOne({
-      employee: employee._id,
+      employee: resolved.employeeId,
       date: { $gte: todayStart, $lte: todayEnd },
     });
 
-    res.json({ success: true, record: record || null, employeeId: employee._id });
+    res.json({ success: true, record: record || null, employeeId: resolved.employeeId });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -447,11 +462,8 @@ export const checkIn = async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     const { workMode = "Office", notes = "" } = req.body;
 
-    const user = await User.findById(userId).select("email");
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    const employee = await Employee.findOne({ email: user.email }).select("_id name joiningDate");
-    if (!employee) return res.status(404).json({ success: false, message: "Employee record not found" });
+    const resolved = await resolveEmployeeId(userId);
+    if (!resolved) return res.status(404).json({ success: false, message: "Employee record not found" });
 
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
@@ -459,7 +471,7 @@ export const checkIn = async (req: Request, res: Response) => {
 
     // Duplicate check
     const existing = await Attendance.findOne({
-      employee: employee._id,
+      employee: resolved.employeeId,
       date: { $gte: todayStart, $lte: todayEnd },
     });
     if (existing) {
@@ -470,12 +482,11 @@ export const checkIn = async (req: Request, res: Response) => {
       });
     }
 
-    // Determine status: after 09:00 = Late  (company shift 09:00–18:00)
     const checkInTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const status = deriveStatus(checkInTime);
 
     const record = await Attendance.create({
-      employee:  employee._id,
+      employee:  resolved.employeeId,
       date:      todayStart,
       checkIn:   checkInTime,
       status,
@@ -501,10 +512,10 @@ export const checkIn = async (req: Request, res: Response) => {
     await auditLog(req, {
       action:   "ATTENDANCE_MARK",
       resource: "Attendance System",
-      details:  `${employee.name} self check-in at ${checkInTime} — ${status}`,
+      details:  `${resolved.name} self check-in at ${checkInTime} — ${status}`,
       severity: status === "Late" ? "WARNING" : "INFO",
       status:   "SUCCESS",
-      meta:     { employeeId: employee._id, checkInTime, status },
+      meta:     { employeeId: resolved.employeeId, checkInTime, status },
     });
   } catch (err: any) {
     if (err.code === 11000) {
@@ -520,18 +531,15 @@ export const checkOut = async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     const { notes } = req.body;
 
-    const user = await User.findById(userId).select("email");
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    const employee = await Employee.findOne({ email: user.email }).select("_id name");
-    if (!employee) return res.status(404).json({ success: false, message: "Employee record not found" });
+    const resolved = await resolveEmployeeId(userId);
+    if (!resolved) return res.status(404).json({ success: false, message: "Employee record not found" });
 
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999);
 
     const record = await Attendance.findOne({
-      employee: employee._id,
+      employee: resolved.employeeId,
       date: { $gte: todayStart, $lte: todayEnd },
     });
 
@@ -550,17 +558,12 @@ export const checkOut = async (req: Request, res: Response) => {
     }
 
     const checkOutTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-    // Calculate working minutes using shift-aware helper
     let workingHours = 0;
-    if (record.checkIn) {
-      workingHours = calcWorkingMins(record.checkIn, checkOutTime);
-    }
+    if (record.checkIn) workingHours = calcWorkingMins(record.checkIn, checkOutTime);
 
-    // Detect early checkout (before 18:00)
-    const checkOutMins = timeToMins(checkOutTime);
+    const checkOutMins    = timeToMins(checkOutTime);
     const isEarlyCheckout = checkOutMins < SHIFT_END_MINS;
-    const earlyByMins = isEarlyCheckout ? SHIFT_END_MINS - checkOutMins : 0;
+    const earlyByMins     = isEarlyCheckout ? SHIFT_END_MINS - checkOutMins : 0;
 
     const updated = await Attendance.findByIdAndUpdate(
       record._id,
@@ -586,10 +589,10 @@ export const checkOut = async (req: Request, res: Response) => {
     await auditLog(req, {
       action:   "ATTENDANCE_MARK",
       resource: "Attendance System",
-      details:  `${employee.name} checked out at ${checkOutTime} — ${hoursDisplay} worked`,
+      details:  `${resolved.name} checked out at ${checkOutTime} — ${hoursDisplay} worked`,
       severity: "INFO",
       status:   "SUCCESS",
-      meta:     { employeeId: employee._id, checkOutTime, workingHours },
+      meta:     { employeeId: resolved.employeeId, checkOutTime, workingHours },
     });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
