@@ -61,6 +61,6 @@ router.get("/announcements", protect, authorizeRoles(ROLES.EMPLOYEE), getAnnounc
 
 // ===== EMPLOYEE READ-ONLY: Holidays =====
 import { getHolidays } from "../controllers/holidayController.js";
-router.get("/holidays", protect, authorizeRoles(ROLES.EMPLOYEE), getHolidays);
+router.get("/holidays", protect, authorizeRoles(ROLES.EMPLOYEE, ROLES.HR), getHolidays);
 
 export default router;

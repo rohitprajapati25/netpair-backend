@@ -56,16 +56,26 @@ export const getAnnouncements = async (req: Request, res: Response) => {
 export const createAnnouncement = async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
+    const role = user?.role?.toLowerCase();
     const { title, message, targetRole = "all", priority = "normal", expiresAt } = req.body;
 
     if (!title?.trim() || !message?.trim()) {
       return res.status(400).json({ success: false, message: "Title and message are required" });
     }
 
+    // HR can only target employees or all — not admin-only audiences
+    const target = targetRole.toLowerCase();
+    if (role === ROLES.HR && target === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "HR can only broadcast to employees or all staff",
+      });
+    }
+
     const announcement = await Announcement.create({
       title:      title.trim(),
       message:    message.trim(),
-      targetRole: targetRole.toLowerCase(),
+      targetRole: target,
       priority,
       expiresAt:  expiresAt ? new Date(expiresAt) : undefined,
       createdBy: {
@@ -95,8 +105,9 @@ export const deleteAnnouncement = async (req: Request, res: Response) => {
     // Only creator or superadmin can delete
     const isOwner      = announcement.createdBy.id.toString() === user.id;
     const isSuperAdmin = user.role === ROLES.SUPER_ADMIN;
+    const isAdmin      = user.role === ROLES.ADMIN;
 
-    if (!isOwner && !isSuperAdmin) {
+    if (!isOwner && !isSuperAdmin && !isAdmin) {
       return res.status(403).json({ success: false, message: "Not authorized to delete this announcement" });
     }
 

@@ -59,7 +59,7 @@ router.put("/leaves/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN
 
 // ===== PROJECT ROUTES =====
 // Static routes BEFORE parameterized routes
-router.get("/projects/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getProjectStats);
+router.get("/projects/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getProjectStats);
 router.get("/projects/logs",  protect, authorizeRoles(ROLES.SUPER_ADMIN), getProjectLogs);
 // Employee can READ projects (needed for timesheet modal & my-projects page)
 router.get("/projects", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getProjects);
@@ -112,9 +112,9 @@ router.delete("/assets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.AD
 
 // ===== TASK ROUTES =====
 // Static routes BEFORE parameterized routes
-router.get("/tasks/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getTaskStats);
+router.get("/tasks/stats", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getTaskStats);
 router.post("/tasks", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), createTask);
-router.get("/tasks", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getTasks);
+router.get("/tasks", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getTasks);
 router.put("/tasks/:id/progress", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPLOYEE), updateTaskProgress);
 router.post("/tasks/:id/comments", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPLOYEE), addTaskComment);
 router.put("/tasks/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), updateTask);
@@ -126,12 +126,12 @@ router.put("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.A
 router.delete("/timesheets/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), deleteTimesheet);
 
 // ===== REPORTS =====
-router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getUnifiedReports);
+router.get("/reports", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getUnifiedReports);
 
 // ===== ANNOUNCEMENTS =====
 router.get("/announcements",        protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getAnnouncements);
-router.post("/announcements",       protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), createAnnouncement);
-router.delete("/announcements/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), deleteAnnouncement);
+router.post("/announcements",       protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), createAnnouncement);
+router.delete("/announcements/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), deleteAnnouncement);
 
 // ===== HOLIDAYS / CALENDAR =====
 import { getHolidays, createHoliday, updateHoliday, deleteHoliday } from "../controllers/holidayController.js";
@@ -144,7 +144,7 @@ router.delete("/holidays/:id", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.
 router.get("/dashboard/stats",            protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.EMPLOYEE), getDashboardStats);
 router.get("/dashboard/activity",         protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getDashboardActivity);
 router.get("/dashboard/attendance-trend", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getDashboardAttendanceTrend);
-router.get("/dashboard/health",           protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), getSystemHealth);
+router.get("/dashboard/health",           protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR), getSystemHealth);
 
 // ===== SETTINGS =====
 // All roles need access to their own profile and password
@@ -156,7 +156,7 @@ router.post("/password", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN,
 // Queries the real AuditLog collection — written by auditLogger utility on every action
 import AuditLog from '../model/AuditLog.js';
 
-router.get("/audit-logs", protect, authorizeRoles(ROLES.SUPER_ADMIN), async (req: any, res: any) => {
+router.get("/audit-logs", protect, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), async (req: any, res: any) => {
   try {
     const {
       page = '1', limit = '10', dateRange = 'week',
