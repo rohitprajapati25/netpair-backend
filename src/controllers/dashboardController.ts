@@ -162,13 +162,15 @@ export const getDashboardAttendanceTrend = async (req: Request, res: Response) =
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const key = d.toISOString().split('T')[0];
+      const key = d.toISOString().split('T')[0] as string;
       map[key] = { Present: 0, Absent: 0, Late: 0 };
     }
 
-    raw.forEach(({ _id, count }) => {
-      if (map[_id.date] && (_id.status === 'Present' || _id.status === 'Absent' || _id.status === 'Late')) {
-        map[_id.date][_id.status as 'Present' | 'Absent' | 'Late'] = count;
+    (raw as Array<{ _id: { date: string; status: string }; count: number }>).forEach(({ _id, count }) => {
+      const dateKey = _id?.date;
+      const statusKey = _id?.status;
+      if (dateKey && map[dateKey] && (statusKey === 'Present' || statusKey === 'Absent' || statusKey === 'Late')) {
+        map[dateKey][statusKey as 'Present' | 'Absent' | 'Late'] = count;
       }
     });
 
