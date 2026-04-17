@@ -57,9 +57,11 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // ── CORS ─────────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_PROD,
   'http://localhost:5173',
   'http://localhost:4173',
   'http://127.0.0.1:5173',
+  'https://netpair.vercel.app',       // Vercel production — always allowed
 ].filter(Boolean) as string[];
 
 app.use(cors({
@@ -79,7 +81,7 @@ const RATE_WINDOW = parseInt(process.env.RATE_WINDOW || '60000');
 
 let redisRateLimiter: ((ip: string) => Promise<boolean>) | null = null;
 
-if (process.env.REDIS_URL) {
+if (process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '') {
   (async () => {
     try {
       const { createClient } = await import('redis');
